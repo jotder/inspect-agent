@@ -10,5 +10,46 @@
   </parent>
   <artifactId>eoiagent-tool</artifactId>
   <name>eoiagent-tool</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Tool registry (T-110). Phase 1: read-only Java-API tools (JavaApiTool wraps host @Tool methods
+    via LangChain4j) + DefaultToolRegistry (role/profile visibility, policy + audit enforced dispatch).
+    Mutating actions, approval gate and MCP arrive in Phase 2.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-core</artifactId>
+    </dependency>
+
+    <!-- LC4j @Tool introspection (ToolSpecifications), AI-Services tool executor, JSON facade. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Retain method parameter names so LangChain4j can bind @Tool arguments by name. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <parameters>true</parameters>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
