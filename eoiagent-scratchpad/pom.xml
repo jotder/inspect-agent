@@ -10,5 +10,26 @@
   </parent>
   <artifactId>eoiagent-scratchpad</artifactId>
   <name>eoiagent-scratchpad</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Scratchpad / virtual FS for context offloading (T-109). Pure-JDK InMemoryScratchpad — no
+    third-party deps, offline-safe by construction.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>

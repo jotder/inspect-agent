@@ -10,5 +10,32 @@
   </parent>
   <artifactId>eoiagent-memory</artifactId>
   <name>eoiagent-memory</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Short-term chat memory (T-108): WindowChatMemory / TokenWindowChatMemory reusing the LangChain4j
+    ChatMemory abstraction, backed by our MemoryStore (InMemoryMemoryStore for MVP/offline).
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-core</artifactId>
+    </dependency>
+
+    <!-- ChatMemory / MessageWindowChatMemory / TokenWindowChatMemory / ChatMemoryStore (reused port). -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>
