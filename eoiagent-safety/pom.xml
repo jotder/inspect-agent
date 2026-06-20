@@ -10,5 +10,39 @@
   </parent>
   <artifactId>eoiagent-safety</artifactId>
   <name>eoiagent-safety</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Guardrails (T-112). Phase 1: Lc4jInputGuardrail (prompt-injection detection + PII redaction) on
+    the EXPERIMENTAL langchain4j-guardrails module — quarantined to this adapter per ADR-0010.
+    Output guardrails (schema/retry) and the approval/policy engine arrive in later tickets.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-core</artifactId>
+    </dependency>
+
+    <!-- LC4j core types (UserMessage) the guardrails module needs. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+    <!-- EXPERIMENTAL (ADR-0010): referenced ONLY by the Lc4j* adapter in this module.
+         Version (1.16.3-beta26) comes from langchain4j-bom — never hardcoded here. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-guardrails</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>
