@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Standalone BOM (no parent, on purpose): the reactor parent imports THIS bom in its
+    dependencyManagement, so the bom must not depend back on the parent (avoids an import cycle).
+    This is the single place third-party versions are pinned (conventions §1, rule #6).
+  -->
+  <groupId>com.eoiagent</groupId>
+  <artifactId>eoiagent-bom</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>EOI Agent BOM</name>
+  <description>
+    Bill of materials: imports langchain4j-bom:1.16.3, pins test libraries and the eoiagent-*
+    module versions. Modules never hardcode a third-party version.
+  </description>
+
+  <properties>
+    <langchain4j-bom.version>1.16.3</langchain4j-bom.version>
+    <langgraph4j.version>1.8.19</langgraph4j.version>
+    <junit-bom.version>5.11.4</junit-bom.version>
+    <assertj.version>3.27.3</assertj.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- LangChain4j: aligns all LC4j artifacts (02-domain-model.md §third-party). -->
+      <dependency>
+        <groupId>dev.langchain4j</groupId>
+        <artifactId>langchain4j-bom</artifactId>
+        <version>${langchain4j-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Test libraries (conventions §8: JUnit 5 + AssertJ). -->
+      <dependency>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
+        <version>${junit-bom.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>${assertj.version}</version>
+      </dependency>
+
+      <!-- Eval case-file parsing (eval-harness spec); pure-Java, offline. -->
+      <dependency>
+        <groupId>org.yaml</groupId>
+        <artifactId>snakeyaml</artifactId>
+        <version>2.3</version>
+      </dependency>
+
+      <!-- eoiagent-* modules: inter-module deps need no explicit version. -->
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-core</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-model</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-knowledge</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-tool</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-runtime</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-memory</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-scratchpad</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-safety</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-persistence</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-observability</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-host</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-config</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-app-api</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-platform</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-eval</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+      <dependency><groupId>com.eoiagent</groupId><artifactId>eoiagent-app-reference</artifactId><version>0.1.0-SNAPSHOT</version></dependency>
+    </dependencies>
+  </dependencyManagement>
+</project>

@@ -1,0 +1,33 @@
+suite: phase1-smoke
+cases:
+  - id: qa-greeting
+    prompt: "say hello"
+    role: USER
+    page: { pageId: home, entityIds: {}, filters: {} }
+    tags: [smoke, text]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "hello" }
+
+  - id: qa-exact-ok
+    prompt: "echo ok"
+    role: ANALYST
+    page: { pageId: home }
+    tags: [smoke, text]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: EXACT, expected: "ok" }
+
+  - id: nav-pipeline-failures
+    prompt: "why did the pipeline fail?"
+    role: ANALYST
+    page:
+      pageId: pipeline-overview
+      entityIds: { pipelineId: "pl-123" }
+      filters: { period: "Q3" }
+    tags: [smoke, navigation]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: pipeline-run-history
+        requiredParams: { pipelineId: "pl-123", status: "FAILED" }

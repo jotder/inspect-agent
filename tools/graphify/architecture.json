@@ -1,0 +1,35 @@
+{
+  "_comment": "Hand-maintained architecture model for the EOI Agent platform. Source of truth: docs/architecture/01-component-model.md. Update this when the component model changes, then re-run `node tools/graphify/generate.mjs`.",
+  "components": [
+    { "id": "C1",  "name": "Model Access",                 "ports": ["LlmGateway"], "package": "com.eoiagent.model",        "spec": "docs/specs/model-gateway.md",        "layer": "core", "adapters": ["OllamaChatAdapter", "OllamaEmbeddingAdapter", "OpenAiCompatibleChatAdapter", "AnthropicChatAdapter", "GeminiChatAdapter", "RoutingLlmGateway"] },
+    { "id": "C2",  "name": "Knowledge / RAG",              "ports": ["EmbeddingModel", "VectorStore", "Retriever", "DocumentIngestor"], "package": "com.eoiagent.knowledge", "spec": "docs/specs/rag-knowledge.md", "layer": "core", "adapters": ["OnnxEmbeddingAdapter", "InMemoryVectorStore", "PgVectorStore", "ProductDocLoader", "ConfigFileLoader", "SchemaConfigLoader", "AdvancedRetriever"] },
+    { "id": "C3",  "name": "Tools",                        "ports": ["Tool", "ToolRegistry"], "package": "com.eoiagent.tool", "spec": "docs/specs/tool-registry.md", "layer": "core", "adapters": ["JavaApiTool", "McpToolAdapter"] },
+    { "id": "C4",  "name": "Agent Runtime / Orchestration","ports": ["Planner", "Orchestrator", "TaskManager"], "package": "com.eoiagent.runtime", "spec": "docs/specs/orchestration-runtime.md", "layer": "core", "adapters": ["AgenticOrchestrator", "LangGraphOrchestrator", "ReActOrchestrator"] },
+    { "id": "C5",  "name": "Memory",                       "ports": ["ChatMemory", "MemoryStore", "LongTermMemory"], "package": "com.eoiagent.memory", "spec": "docs/specs/memory.md", "layer": "core", "adapters": ["WindowChatMemory", "TokenWindowChatMemory", "SummarizingChatMemory", "InMemoryMemoryStore", "FileMemoryStore", "PostgresMemoryStore", "VectorLongTermMemory"] },
+    { "id": "C6",  "name": "Scratchpad / Virtual FS",      "ports": ["Scratchpad"], "package": "com.eoiagent.scratchpad", "spec": "docs/specs/scratchpad.md", "layer": "core", "adapters": ["InMemoryScratchpad", "TempDirScratchpad"] },
+    { "id": "C7",  "name": "Safety / Governance",          "ports": ["ApprovalGate", "PolicyEngine", "Guardrail"], "package": "com.eoiagent.safety", "spec": "docs/specs/approval-governance.md", "spec2": "docs/specs/guardrails.md", "layer": "core", "adapters": ["CallbackApprovalGate", "RoleBasedPolicyEngine", "Lc4jInputGuardrail", "Lc4jOutputGuardrail"] },
+    { "id": "C8",  "name": "Persistence / Checkpointing",  "ports": ["CheckpointStore"], "package": "com.eoiagent.persistence", "spec": "docs/specs/orchestration-runtime.md", "layer": "core", "adapters": ["InMemoryCheckpointStore", "PostgresCheckpointStore"] },
+    { "id": "C9",  "name": "Observability / Audit",        "ports": ["AuditSink", "TraceCollector"], "package": "com.eoiagent.observability", "spec": "docs/specs/audit-observability.md", "layer": "core", "adapters": ["Slf4jAuditSink", "JdbcAuditSink", "FileAuditSink", "NoopTraceCollector", "OpenTelemetryTraceCollector"] },
+    { "id": "C10", "name": "Host Integration",             "ports": ["AgentService", "AgentSession"], "package": "com.eoiagent.host", "spec": "docs/specs/host-integration.md", "layer": "core", "adapters": [] },
+    { "id": "C11", "name": "Configuration / Deployment Profiles", "ports": ["ConfigProvider"], "package": "com.eoiagent.config", "spec": "docs/specs/config-profiles.md", "layer": "core", "adapters": ["EnvConfigProvider", "PropertiesConfigProvider", "ProgrammaticConfigProvider"] }
+  ],
+  "reuseLayer": [
+    { "id": "SPI", "name": "ApplicationPack SPI", "ports": ["ApplicationPack"], "package": "com.eoiagent.app", "module": "eoiagent-app-api", "spec": "docs/specs/application-pack.md", "layer": "app-api", "providers": ["PackMetadata", "ModelProfile", "KnowledgeSource[]", "ToolProvider", "NavigationCatalog", "PromptProfile", "PolicyProfile", "PackConfig"] },
+    { "id": "PLAT", "name": "AgentPlatform / PlatformBuilder", "ports": ["AgentPlatform", "PlatformBuilder"], "package": "com.eoiagent.platform", "module": "eoiagent-platform", "spec": "docs/specs/application-pack.md", "layer": "platform" },
+    { "id": "REF", "name": "Reference Application Pack", "module": "eoiagent-app-reference", "spec": "docs/specs/reference-app-pack.md", "layer": "app-pack" }
+  ],
+  "modules": [
+    { "id": "M_CORE", "name": "core", "layer": "core", "comment": "ports + domain types + adapters" },
+    { "id": "M_APPAPI", "name": "eoiagent-app-api", "layer": "app-api" },
+    { "id": "M_PLAT", "name": "eoiagent-platform", "layer": "platform" },
+    { "id": "M_REF", "name": "eoiagent-app-reference", "layer": "app-pack" },
+    { "id": "M_HOST", "name": "host app (consumer)", "layer": "host" }
+  ],
+  "moduleDeps": [
+    { "from": "M_HOST", "to": "M_PLAT", "kind": "depends-on" },
+    { "from": "M_PLAT", "to": "M_CORE", "kind": "depends-on" },
+    { "from": "M_PLAT", "to": "M_APPAPI", "kind": "consumes" },
+    { "from": "M_REF", "to": "M_APPAPI", "kind": "implements" },
+    { "from": "M_APPAPI", "to": "M_CORE", "kind": "depends-on (domain types only)" }
+  ]
+}

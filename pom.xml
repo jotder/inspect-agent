@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.eoiagent</groupId>
+  <artifactId>eoiagent-parent</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>EOI Agent (parent / aggregator)</name>
+  <description>
+    Enterprise Operational Intelligence Agent Platform — reactor parent.
+    See docs/architecture/02-domain-model.md (Maven coordinates) and AGENTS.md.
+  </description>
+
+  <properties>
+    <maven.compiler.release>25</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <!-- Build plugin versions (plugins, not dependencies; pinned directly). -->
+    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
+  </properties>
+
+  <!-- Reactor modules. Every coordinate from 02-domain-model.md must exist (T-001 AC2). -->
+  <modules>
+    <module>eoiagent-bom</module>
+    <module>eoiagent-core</module>
+    <module>eoiagent-model</module>
+    <module>eoiagent-knowledge</module>
+    <module>eoiagent-tool</module>
+    <module>eoiagent-runtime</module>
+    <module>eoiagent-memory</module>
+    <module>eoiagent-scratchpad</module>
+    <module>eoiagent-safety</module>
+    <module>eoiagent-persistence</module>
+    <module>eoiagent-observability</module>
+    <module>eoiagent-host</module>
+    <module>eoiagent-config</module>
+    <module>eoiagent-app-api</module>
+    <module>eoiagent-platform</module>
+    <module>eoiagent-eval</module>
+    <module>eoiagent-app-reference</module>
+  </modules>
+
+  <!--
+    All third-party versions resolve through our BOM (T-001 AC3, conventions §1/#6):
+    no module pom hardcodes a third-party version.
+  -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.eoiagent</groupId>
+        <artifactId>eoiagent-bom</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

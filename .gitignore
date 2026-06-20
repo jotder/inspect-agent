@@ -1,0 +1,18 @@
+# Maven build output
+target/
+
+# Node (graphify tooling)
+node_modules/
+
+# IDE / editor
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS noise
+Thumbs.db
+.DS_Store
+
+# Logs / temp
+*.log
