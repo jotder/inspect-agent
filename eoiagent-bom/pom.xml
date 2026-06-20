@@ -25,6 +25,7 @@
     <langgraph4j.version>1.8.19</langgraph4j.version>
     <junit-bom.version>5.11.4</junit-bom.version>
     <assertj.version>3.27.3</assertj.version>
+    <slf4j.version>2.0.17</slf4j.version>
   </properties>
 
   <dependencyManagement>
@@ -57,6 +58,13 @@
         <groupId>org.yaml</groupId>
         <artifactId>snakeyaml</artifactId>
         <version>2.3</version>
+      </dependency>
+
+      <!-- Audit logging facade (Slf4jAuditSink, audit-observability spec). -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
       </dependency>
 
       <!-- eoiagent-* modules: inter-module deps need no explicit version. -->
