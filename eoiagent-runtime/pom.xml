@@ -10,5 +10,50 @@
   </parent>
   <artifactId>eoiagent-runtime</artifactId>
   <name>eoiagent-runtime</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Agent runtime / orchestration (T-111). Phase 1: ReActOrchestrator (our bounded reason+act loop,
+    Flow B, read-only) and AgenticOrchestrator (langchain4j-agentic, experimental — quarantined to
+    this adapter module per ADR-0010). Planner/TaskManager and Flows C/D/E arrive in Phase 2/3.
+  </description>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-core</artifactId>
+    </dependency>
+
+    <!-- ChatModel + AI-Service annotations (@UserMessage/@V) used by the agentic adapter. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j</artifactId>
+    </dependency>
+    <!-- EXPERIMENTAL (ADR-0010): the agentic workflow engine lives ONLY in this adapter module.
+         Version comes from langchain4j-bom (1.16.3-beta26) — never hardcoded here. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-agentic</artifactId>
+    </dependency>
+
+    <!-- Test-only concrete adapters to wire the loop end-to-end, offline. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-tool</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-scratchpad</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>
