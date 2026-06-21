@@ -35,6 +35,16 @@ final class ScriptedGateway implements LlmGateway {
         return this;
     }
 
+    /** Enqueue a single turn carrying several tool calls at once (e.g. a planning response). */
+    ScriptedGateway toolCalls(String... tools) {
+        List<ToolCall> calls = new java.util.ArrayList<>();
+        for (String tool : tools) {
+            calls.add(new ToolCall(tool, Map.of(), null));
+        }
+        scripted.add(new ChatResult("", List.copyOf(calls), MODEL, null));
+        return this;
+    }
+
     ScriptedGateway finalText(String text) {
         scripted.add(new ChatResult(text, List.of(), MODEL, null));
         return this;
