@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.eoiagent</groupId>
+    <artifactId>eoiagent-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>eoiagent-examples</artifactId>
+  <name>eoiagent-examples</name>
+  <description>
+    Runnable sample apps that showcase the assembled platform end-to-end, booting the reference
+    Application Pack (Acme Lakehouse Suite) through PlatformBuilder. Each demo focuses on one
+    capability area (bootstrap, RAG corpus + read-only tools, navigation, policy/profiles, a QA
+    session). They run fully offline against a deterministic StubLlmGateway by default, and use a
+    local Ollama server automatically if one is reachable. Not a library — a learning surface and a
+    host-integration example.
+  </description>
+
+  <dependencies>
+    <!-- The platform assembler + the reference pack it assembles. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-platform</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-app-reference</artifactId>
+    </dependency>
+    <!-- StubLlmGateway (offline) + the OpenAI-compatible adapter for "Ollama if present". -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-model</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Run a demo: mvn -q -pl eoiagent-examples exec:java -Dexec.mainClass=com.eoiagent.examples.RunAllDemos -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <configuration>
+          <mainClass>com.eoiagent.examples.RunAllDemos</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

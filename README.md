@@ -11,14 +11,19 @@ Pack** that supplies that product's models, domain knowledge, tools, navigation,
 and config through a typed SPI. A new product = a new pack, not a fork of core — see
 [`docs/architecture/05-core-and-application-packs.md`](docs/architecture/05-core-and-application-packs.md).
 
-> **Status:** architecture & build documentation. No code yet — this repository currently holds
-> the agent-friendly specs that AI coding agents will implement.
+> **Status:** Phase 0 (foundations) and Phase 1 (MVP) are **implemented** — an 18-module Maven
+> reactor that builds green and runs **fully offline** (JDK 25, Maven). The CORE engine assembles a
+> working `AgentService` from an Application Pack via `eoiagent-platform`; the bundled **Acme
+> Lakehouse** reference pack ([`eoiagent-app-reference`](eoiagent-app-reference)) and the runnable
+> demos in [`eoiagent-examples`](eoiagent-examples) show it end-to-end. Phase 2 (planning, mutating
+> actions, delegation) is next. The agent-friendly specs in [`docs/`](docs/) remain the source of truth.
 
 ## Start here
 
 | If you are… | Read |
 |-------------|------|
 | **An AI coding agent** | [`AGENTS.md`](AGENTS.md) — the build guide. |
+| **Wanting to see it run** | [Try it — runnable demos](#try-it--runnable-demos) ([`eoiagent-examples`](eoiagent-examples)) |
 | New to the project | [`docs/architecture/00-overview.md`](docs/architecture/00-overview.md) |
 | Looking for the contracts | [`docs/architecture/01-component-model.md`](docs/architecture/01-component-model.md) + [`docs/architecture/02-domain-model.md`](docs/architecture/02-domain-model.md) |
 | Wondering *why* a choice was made | [`docs/adr/`](docs/adr/) |
@@ -48,6 +53,48 @@ docs/
     roadmap.md                phases 0–4
     backlog.md                agent-sized tickets with acceptance criteria
 ```
+
+## What's implemented
+
+An 18-module Maven reactor (`mvn clean install`, JDK 25) — the CORE engine plus the reuse layer:
+
+- **CORE engine** — `eoiagent-core` (ports + domain types) with adapters in `eoiagent-config`,
+  `eoiagent-model` (LangChain4j chat/embeddings + an offline stub), `eoiagent-knowledge` (in-process
+  ONNX embeddings + in-memory vector store + ingestor/retriever), `eoiagent-tool`, `eoiagent-runtime`
+  (ReAct orchestrator), `eoiagent-memory`, `eoiagent-scratchpad`, `eoiagent-safety` (input
+  guardrails), `eoiagent-observability` (audit sinks), `eoiagent-host` (the `AgentService` facade),
+  and `eoiagent-eval` (golden-set harness).
+- **Reuse layer** — `eoiagent-app-api` (the typed Application Pack SPI), `eoiagent-platform`
+  (`PlatformBuilder` — validates a pack and assembles the engine), `eoiagent-app-reference` (the
+  worked **Acme Lakehouse** pack), and `eoiagent-examples` (runnable demos).
+
+> **Phase-1 scope:** the read-only RAG + tools + page-help path. Mutating actions behind approval,
+> stateful investigation, and end-to-end `NavigationIntent` emission arrive in later phases (roadmap below).
+
+## Try it — runnable demos
+
+No setup required — the demos run **fully offline** against a deterministic stub model, and use a
+local **Ollama** automatically if one is reachable at `localhost:11434`.
+
+```bash
+# Build once, then run all demos (bootstrap, tools, navigation, policy, a Q&A session):
+mvn -q -DskipTests install
+mvn -q -pl eoiagent-examples exec:java
+
+# Force offline even if Ollama is running:
+mvn -q -pl eoiagent-examples exec:java -Deoiagent.demo.offline=true
+
+# Run a single demo:
+mvn -q -pl eoiagent-examples exec:java -Dexec.mainClass=com.eoiagent.examples.QaSessionDemo
+```
+
+| Demo | Shows |
+|------|-------|
+| `PlatformBootstrapDemo` | Assembling a usable `AgentService` from a pack in one call (Flow 0) |
+| `RagAndToolsDemo` | The bundled knowledge corpus + invoking the read-only tools |
+| `NavigationDemo` | The navigation catalog and a validated `NavigationIntent` |
+| `PolicyAndProfilesDemo` | Host-role → `Role` mapping, capability grants, OFFLINE config |
+| `QaSessionDemo` | An end-to-end Q&A session with the recorded audit trail |
 
 ## Tech at a glance
 
