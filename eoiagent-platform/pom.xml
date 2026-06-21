@@ -10,5 +10,64 @@
   </parent>
   <artifactId>eoiagent-platform</artifactId>
   <name>eoiagent-platform</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Platform bootstrap (T-010): PlatformBuilder + DefaultAgentPlatform + PackValidator. The core
+    assembly module — it consumes an ApplicationPack (eoiagent-app-api SPI) and wires the core
+    adapters into a ready AgentService (Flow 0). CORE never depends on a pack; the pack never sees
+    this module. Phase-1 wiring drives the read-only ReAct loop offline; RAG/memory/streaming wiring
+    arrives with later phases.
+  </description>
+
+  <dependencies>
+    <!-- The SPI a product implements, plus the core ports/domain types it returns. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-app-api</artifactId>
+    </dependency>
+
+    <!-- Core adapters the platform assembles from the pack. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-config</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-model</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-tool</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-runtime</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-scratchpad</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-safety</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-observability</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-host</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>
