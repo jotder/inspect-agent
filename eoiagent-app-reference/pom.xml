@@ -10,5 +10,41 @@
   </parent>
   <artifactId>eoiagent-app-reference</artifactId>
   <name>eoiagent-app-reference</name>
-  <description>Phase-0 skeleton (T-001). Implemented in a later ticket.</description>
+  <description>
+    Reference Application Pack (T-116): a worked, copy-to-start ApplicationPack for the fictional
+    "Acme Lakehouse Suite", runnable fully offline. Implements all eight SPI providers against the
+    OFFLINE profile. COMPILE deps are eoiagent-app-api + the BOM ONLY (no core adapter module, no
+    agent framework — ADR-0011, enforced by ReferencePackDependencyRulesTest). Tests pull
+    eoiagent-platform + eoiagent-eval (test scope) to assemble the pack and run its golden set offline.
+  </description>
+
+  <dependencies>
+    <!-- The SPI this pack implements. Transitively brings only eoiagent-core domain types. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-app-api</artifactId>
+    </dependency>
+
+    <!-- Test-only: assemble the pack into a real AgentService and run the golden set offline. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-platform</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-eval</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>

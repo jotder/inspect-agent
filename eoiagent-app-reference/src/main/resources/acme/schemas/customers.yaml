@@ -1,0 +1,10 @@
+dataset: customers
+zone: curated
+description: One row per customer.
+columns:
+  - name: customer_id
+    type: long
+  - name: name
+    type: string
+  - name: region
+    type: string

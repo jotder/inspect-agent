@@ -1,0 +1,12 @@
+dataset: orders
+zone: curated
+description: One row per customer order.
+columns:
+  - name: order_id
+    type: long
+  - name: customer_id
+    type: long
+  - name: amount
+    type: decimal
+  - name: created_at
+    type: timestamp

@@ -1,0 +1,9 @@
+pipeline: nightly-load
+schedule: "0 2 * * *"   # daily at 02:00 UTC
+source_zone: raw
+target_zone: curated
+materializes:
+  - orders
+  - customers
+  - revenue_daily
+description: Refreshes curated datasets from the raw zone every night.
