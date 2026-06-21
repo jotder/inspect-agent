@@ -1,0 +1,260 @@
+suite: phase1-golden
+# Phase-1 MVP golden set (T-115). Product-help Q&A + navigation intents, scored OFFLINE against a
+# scripted agent + RecordingAuditSink. Tool-call and citation assertions are reconstructed from the
+# audit TOOL_CALL/RETRIEVAL stream (eval-harness spec §Behavior 1c), not from internal hooks.
+cases:
+
+  # --- TEXT: product help (CONTAINS) -----------------------------------------------------------
+  - id: qa-what-is-eoi
+    prompt: "What is the EOI platform?"
+    role: USER
+    page: { pageId: docs-home, entityIds: {}, filters: {} }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "operational intelligence" }
+
+  - id: qa-supported-sources
+    prompt: "Which data sources can I connect?"
+    role: USER
+    page: { pageId: docs-home }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "Iceberg" }
+
+  - id: qa-offline-mode
+    prompt: "Does EOI run fully offline?"
+    role: ANALYST
+    page: { pageId: docs-home }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "offline" }
+
+  - id: qa-roles
+    prompt: "What roles exist in EOI?"
+    role: ADMIN
+    page: { pageId: settings }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "analyst" }
+
+  - id: qa-export-formats
+    prompt: "What export formats are supported?"
+    role: USER
+    page: { pageId: docs-home }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "csv" }
+
+  - id: qa-auth
+    prompt: "How do I authenticate to the API?"
+    role: ANALYST
+    page: { pageId: docs-home }
+    tags: [golden, text, help]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "token" }
+
+  # --- TEXT: exact / regex ----------------------------------------------------------------------
+  - id: qa-version
+    prompt: "What is the current platform version?"
+    role: USER
+    page: { pageId: docs-home }
+    tags: [golden, text, exact]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: EXACT, expected: "0.1.0" }
+
+  - id: qa-healthcheck
+    prompt: "ping"
+    role: USER
+    page: { pageId: home }
+    tags: [golden, text, exact]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: EXACT, expected: "pong" }
+
+  - id: qa-latency
+    prompt: "What is the typical interactive query latency?"
+    role: ANALYST
+    page: { pageId: docs-home }
+    tags: [golden, text, regex]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: REGEX, expected: "\\d+\\s?ms" }
+
+  - id: qa-rate-limit
+    prompt: "Is there a rate limit on the API?"
+    role: ANALYST
+    page: { pageId: docs-home }
+    tags: [golden, text, regex]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: REGEX, expected: "(?i)rate.?limit" }
+
+  # --- TEXT with RAG citations (mustCiteSourceIds, read from RETRIEVAL audit) -------------------
+  - id: qa-iceberg-cite
+    prompt: "Explain Iceberg tables in our stack."
+    role: USER
+    page: { pageId: docs-home }
+    tags: [golden, text, citations]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "table format" }
+      mustCiteSourceIds: [ "docs/iceberg-overview" ]
+
+  - id: qa-retention-cite
+    prompt: "What is our data retention policy?"
+    role: ANALYST
+    page: { pageId: docs-home }
+    tags: [golden, text, citations]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "90 days" }
+      mustCiteSourceIds: [ "docs/retention-policy", "docs/compliance" ]
+
+  # --- TEXT with read-only tool calls (present + args subset, from TOOL_CALL audit) ------------
+  - id: qa-pipeline-status
+    prompt: "What is the status of pipeline pl-123?"
+    role: ANALYST
+    page: { pageId: pipeline-overview, entityIds: { pipelineId: "pl-123" }, filters: {} }
+    tags: [golden, text, tools]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "running" }
+      toolCalls:
+        - toolName: get_pipeline_status
+          argsSubset: { pipelineId: "pl-123" }
+
+  - id: qa-dataset-rowcount
+    prompt: "How many rows are in dataset ds-9?"
+    role: ANALYST
+    page: { pageId: dataset-detail, entityIds: { datasetId: "ds-9" }, filters: {} }
+    tags: [golden, text, tools]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "rows" }
+      toolCalls:
+        - toolName: count_rows
+          argsSubset: { datasetId: "ds-9" }
+
+  - id: qa-readonly-no-mutation
+    prompt: "Summarize the health of pipeline pl-123."
+    role: ANALYST
+    page: { pageId: pipeline-overview, entityIds: { pipelineId: "pl-123" }, filters: {} }
+    tags: [golden, text, tools, readonly]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "healthy" }
+      toolCalls:
+        - toolName: get_pipeline_status
+          argsSubset: { pipelineId: "pl-123" }
+        - toolName: run_pipeline        # mutating — must never be invoked in Phase 1
+          mustBeAbsent: true
+        - toolName: delete_dataset      # mutating — must never be invoked in Phase 1
+          mustBeAbsent: true
+
+  # --- NAVIGATION intents (targetPageId + requiredParams) ---------------------------------------
+  - id: nav-pipeline-failures-q3
+    prompt: "Why did the ingestion pipeline pl-123 fail last quarter?"
+    role: ANALYST
+    page:
+      pageId: pipeline-overview
+      entityIds: { pipelineId: "pl-123" }
+      filters: { period: "Q3" }
+    tags: [golden, navigation, tools]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: pipeline-run-history
+        requiredParams: { pipelineId: "pl-123", status: "FAILED", period: "Q3" }
+      toolCalls:
+        - toolName: list_pipeline_runs
+          argsSubset: { pipelineId: "pl-123" }
+        - toolName: run_pipeline
+          mustBeAbsent: true
+
+  - id: nav-open-revenue-dashboard
+    prompt: "Take me to the revenue dashboard."
+    role: USER
+    page: { pageId: home }
+    tags: [golden, navigation]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: dashboard
+        requiredParams: { dashboardId: "rev-1" }
+
+  - id: nav-incident-for-alert
+    prompt: "Show me the incident for alert al-7."
+    role: SUPPORT
+    page: { pageId: alerts, entityIds: { alertId: "al-7" }, filters: {} }
+    tags: [golden, navigation]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: incident-detail
+        requiredParams: { alertId: "al-7" }
+
+  - id: nav-open-dataset
+    prompt: "Open dataset ds-9."
+    role: ANALYST
+    page: { pageId: catalog }
+    tags: [golden, navigation]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: dataset-detail
+        requiredParams: { datasetId: "ds-9" }
+
+  - id: nav-configure-retention-cite
+    prompt: "Where do I configure data retention?"
+    role: ADMIN
+    page: { pageId: settings }
+    tags: [golden, navigation, citations]
+    expect:
+      expectedKind: NAVIGATION
+      navigation:
+        targetPageId: settings
+        requiredParams: { section: "retention" }
+      mustCiteSourceIds: [ "docs/retention-policy" ]
+
+  # --- CLARIFICATION ----------------------------------------------------------------------------
+  - id: clarify-ambiguous
+    prompt: "fix it"
+    role: USER
+    page: { pageId: home }
+    tags: [golden, clarification]
+    expect:
+      expectedKind: CLARIFICATION
+      answer: { mode: CONTAINS, expected: "which" }
+
+  - id: clarify-too-broad
+    prompt: "tell me everything"
+    role: USER
+    page: { pageId: home }
+    tags: [golden, clarification]
+    expect:
+      expectedKind: CLARIFICATION
+      answer: { mode: CONTAINS, expected: "narrow" }
+
+  # --- ERROR (as answer kind, and via a thrown fault) -------------------------------------------
+  - id: err-as-answer
+    prompt: "return an error answer"
+    role: USER
+    page: { pageId: home }
+    tags: [golden, error]
+    expect:
+      expectedKind: ERROR
+
+  - id: err-model-outage
+    prompt: "trigger a model outage"
+    role: USER
+    page: { pageId: home }
+    tags: [golden, error]
+    expect:
+      expectedKind: ERROR

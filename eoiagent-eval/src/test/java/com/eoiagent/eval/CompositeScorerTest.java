@@ -6,6 +6,7 @@ import com.eoiagent.core.NavigationIntent;
 import com.eoiagent.core.PageContext;
 import com.eoiagent.core.Role;
 import com.eoiagent.core.RunId;
+import com.eoiagent.core.ToolCall;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -97,17 +98,52 @@ class CompositeScorerTest {
     }
 
     @Test
-    void scaffoldUnsupportedChecksFailWithDetailRatherThanSilentlyPass() {
-        // tool-call assertion present -> not evaluable without the audit stream yet
-        EvalCase withTool = new EvalCase("t", "p", page(), Role.USER,
+    void toolCallPresentWithArgsSubsetPassesAndMissingFails() { // AC4
+        EvalCase c = new EvalCase("t", "p", page(), Role.ANALYST,
+                new Expectation(AnswerKind.TEXT, null,
+                        List.of(new ToolCallAssertion("get_status", Map.of("id", "x1"), false)), null, List.of()),
+                Set.of());
+        AgentAnswer ans = new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"));
+        EvalRunResult present = new EvalRunResult(ans,
+                List.of(new ToolCall("get_status", Map.of("id", "x1", "extra", "y"), new RunId("r"))),
+                List.of(), ans.run());
+        EvalRunResult missing = new EvalRunResult(ans, List.of(), List.of(), ans.run());
+
+        assertThat(scorer.score(c, present).pass()).isTrue();
+        assertThat(scorer.score(c, missing).pass()).isFalse();
+    }
+
+    @Test
+    void mutatingToolMustBeAbsentPassesWhenAbsentFailsWhenInvoked() { // AC4
+        EvalCase c = new EvalCase("t", "p", page(), Role.ANALYST,
                 new Expectation(AnswerKind.TEXT, null,
                         List.of(new ToolCallAssertion("run_pipeline", Map.of(), true)), null, List.of()),
                 Set.of());
-        Score toolScore = scorer.score(withTool, textResult("anything"));
-        assertThat(toolScore.pass()).isFalse();
-        assertThat(toolScore.detail()).containsIgnoringCase("tool-call");
+        AgentAnswer ans = new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"));
+        EvalRunResult absent = new EvalRunResult(ans, List.of(), List.of(), ans.run());
+        EvalRunResult invoked = new EvalRunResult(ans,
+                List.of(new ToolCall("run_pipeline", Map.of(), new RunId("r"))), List.of(), ans.run());
 
-        // LLM_JUDGE not supported in the scaffold
+        assertThat(scorer.score(c, absent).pass()).isTrue();
+        assertThat(scorer.score(c, invoked).pass()).isFalse();
+        assertThat(scorer.score(c, invoked).detail()).containsIgnoringCase("must be absent");
+    }
+
+    @Test
+    void citationsRequiredPassWhenPresentFailWhenMissing() {
+        EvalCase c = new EvalCase("t", "p", page(), Role.USER,
+                new Expectation(AnswerKind.TEXT, null, List.of(), null, List.of("docs/a", "docs/b")),
+                Set.of());
+        AgentAnswer ans = new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"));
+        EvalRunResult present = new EvalRunResult(ans, List.of(), List.of("docs/a", "docs/b", "docs/c"), ans.run());
+        EvalRunResult missing = new EvalRunResult(ans, List.of(), List.of("docs/a"), ans.run());
+
+        assertThat(scorer.score(c, present).pass()).isTrue();
+        assertThat(scorer.score(c, missing).pass()).isFalse();
+    }
+
+    @Test
+    void llmJudgeIsUnsupportedInTheDeterministicScorer() {
         Score judgeScore = scorer.score(textCase(MatchMode.LLM_JUDGE, "rubric"), textResult("x"));
         assertThat(judgeScore.pass()).isFalse();
         assertThat(judgeScore.detail()).containsIgnoringCase("LLM_JUDGE");
