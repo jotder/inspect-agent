@@ -1,0 +1,115 @@
+suite: phase2-golden
+# Phase-2 golden set (T-211). SQL-generation, schema/metadata analysis, and mutating-with-approval
+# scenarios, scored OFFLINE against a scripted agent + RecordingAuditSink. Read-only tool calls are
+# reconstructed from the audit TOOL_CALL stream; an APPROVED mutating action's execution is
+# reconstructed from the MUTATION event (Flow C, post-approval); a DENIED action emits APPROVAL only
+# and therefore must be absent from the tool calls (eval-harness spec; invariant 2).
+cases:
+
+  # --- SQL generation (GENERATE_SQL / RUN_SQL_READONLY, read-only) ------------------------------
+  - id: sql-generate-orders-by-region
+    prompt: "Generate SQL for total orders by region."
+    role: ANALYST
+    page: { pageId: sql-console, entityIds: { datasetId: "orders" }, filters: {} }
+    tags: [phase2, sql]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: REGEX, expected: "(?is)select.+from.+group by" }
+      toolCalls:
+        - toolName: generate_sql
+          argsSubset: { dataset: "orders" }
+        - toolName: run_pipeline       # mutating — must never be invoked for a SQL-gen ask
+          mustBeAbsent: true
+
+  - id: sql-readonly-active-users
+    prompt: "Run a read-only query for the count of active users."
+    role: ANALYST
+    page: { pageId: sql-console, entityIds: { datasetId: "users" }, filters: {} }
+    tags: [phase2, sql]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "active users" }
+      toolCalls:
+        - toolName: run_sql_readonly
+          argsSubset: { dataset: "users" }
+        - toolName: edit_config
+          mustBeAbsent: true
+
+  # --- Analysis (schema / metadata, read-only) -------------------------------------------------
+  - id: analysis-schema-ds9
+    prompt: "Analyze the schema of dataset ds-9."
+    role: ANALYST
+    page: { pageId: dataset-detail, entityIds: { datasetId: "ds-9" }, filters: {} }
+    tags: [phase2, analysis]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "columns" }
+      toolCalls:
+        - toolName: describe_schema
+          argsSubset: { datasetId: "ds-9" }
+        - toolName: read_metadata
+          argsSubset: { datasetId: "ds-9" }
+        - toolName: run_pipeline
+          mustBeAbsent: true
+
+  - id: analysis-rowcount-ds9
+    prompt: "Profile the row count of dataset ds-9."
+    role: ANALYST
+    page: { pageId: dataset-detail, entityIds: { datasetId: "ds-9" }, filters: {} }
+    tags: [phase2, analysis]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: REGEX, expected: "\\d[\\d,]*\\s+rows" }
+      toolCalls:
+        - toolName: count_rows
+          argsSubset: { datasetId: "ds-9" }
+
+  # --- Mutating with approval: APPROVED → executed (reconstructed from the MUTATION event) ------
+  - id: mutating-run-pipeline-approved
+    prompt: "Run pipeline pl-1."
+    role: SUPPORT
+    page: { pageId: pipeline-overview, entityIds: { pipelineId: "pl-1" }, filters: {} }
+    tags: [phase2, mutating, approved]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "started" }
+      toolCalls:
+        - toolName: run_pipeline
+          argsSubset: { pipelineId: "pl-1" }
+
+  - id: mutating-edit-config-approved
+    prompt: "Set the max batch size to 5000."
+    role: ADMIN
+    page: { pageId: settings, entityIds: {}, filters: {} }
+    tags: [phase2, mutating, approved]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "updated" }
+      toolCalls:
+        - toolName: edit_config
+          argsSubset: { key: "max.batch.size", value: "5000" }
+
+  - id: mutating-trigger-job-approved
+    prompt: "Trigger the nightly report job."
+    role: SUPPORT
+    page: { pageId: jobs, entityIds: {}, filters: {} }
+    tags: [phase2, mutating, approved]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "triggered" }
+      toolCalls:
+        - toolName: trigger_job
+          argsSubset: { jobName: "nightly_report" }
+
+  # --- Mutating with approval: DENIED → not executed (APPROVAL only, no MUTATION) ---------------
+  - id: mutating-delete-dataset-denied
+    prompt: "Delete dataset ds-9."
+    role: ADMIN
+    page: { pageId: dataset-detail, entityIds: { datasetId: "ds-9" }, filters: {} }
+    tags: [phase2, mutating, denied]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "not approved" }
+      toolCalls:
+        - toolName: delete_dataset     # approval DENIED → the mutation must NOT have executed
+          mustBeAbsent: true

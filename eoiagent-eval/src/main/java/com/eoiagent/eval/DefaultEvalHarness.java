@@ -91,11 +91,17 @@ public final class DefaultEvalHarness implements EvalHarness {
         }
     }
 
-    /** Rebuilds a run's tool calls from its {@code TOOL_CALL} events ({@code details.tool}/{@code details.args}). */
+    /**
+     * Rebuilds a run's tool calls from its {@code TOOL_CALL} and {@code MUTATION} events
+     * ({@code details.tool}/{@code details.args}). A read-only tool is audited {@code TOOL_CALL}; a
+     * mutating tool's execution is audited {@code MUTATION} (post-approval, Flow C) — both are tool
+     * invocations the harness must surface so a case can assert mutating behaviour.
+     */
     private static List<ToolCall> reconstructToolCalls(List<AuditEvent> events, RunId run) {
         List<ToolCall> calls = new ArrayList<>();
         for (AuditEvent e : events) {
-            if (e.kind() != AuditKind.TOOL_CALL || !Objects.equals(e.run(), run)) {
+            if ((e.kind() != AuditKind.TOOL_CALL && e.kind() != AuditKind.MUTATION)
+                    || !Objects.equals(e.run(), run)) {
                 continue;
             }
             Map<String, Object> details = e.details() == null ? Map.of() : e.details();
