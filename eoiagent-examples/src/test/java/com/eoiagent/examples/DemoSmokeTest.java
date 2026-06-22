@@ -43,6 +43,41 @@ class DemoSmokeTest {
     }
 
     @Test
+    void mutatingApprovalDemoRuns() {
+        assertThatCode(() -> MutatingApprovalDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void supervisorDemoRuns() {
+        assertThatCode(() -> SupervisorDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void summarizingMemoryDemoRuns() {
+        assertThatCode(() -> SummarizingMemoryDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void advancedRetrievalDemoRuns() {
+        assertThatCode(() -> AdvancedRetrievalDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void mcpGatingDemoRuns() {
+        assertThatCode(() -> McpGatingDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void outputGuardrailDemoRuns() {
+        assertThatCode(() -> OutputGuardrailDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
+    void phase2EvalDemoRuns() {
+        assertThatCode(() -> Phase2EvalDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
     void runAllDemosRuns() {
         assertThatCode(() -> RunAllDemos.main(new String[0])).doesNotThrowAnyException();
     }

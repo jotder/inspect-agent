@@ -34,6 +34,21 @@
       <groupId>com.eoiagent</groupId>
       <artifactId>eoiagent-model</artifactId>
     </dependency>
+    <!-- Phase-2 adapter demos wire these directly (the assembled platform is Phase-1/Flow-B only):
+         advanced retrieval (knowledge), summarizing memory (memory), and the eval harness (eval).
+         tool/safety/runtime/config arrive transitively via eoiagent-platform. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-knowledge</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-memory</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-eval</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

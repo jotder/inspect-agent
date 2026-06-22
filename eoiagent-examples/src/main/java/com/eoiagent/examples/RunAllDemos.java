@@ -22,6 +22,19 @@ public final class RunAllDemos {
         QaSessionDemo.main(args);
 
         System.out.println();
+        System.out.println("------------------------------------------------------------");
+        System.out.println("  Phase 2 capabilities (agentic flows + safety)");
+        System.out.println("------------------------------------------------------------");
+
+        MutatingApprovalDemo.main(args);   // Flow C: plan -> approve -> act + RBAC (T-201..T-204)
+        SupervisorDemo.main(args);         // Flow D: supervisor + sub-agents (T-205)
+        SummarizingMemoryDemo.main(args);  // running-summary chat memory (T-207)
+        AdvancedRetrievalDemo.main(args);  // rewrite + route + re-rank retrieval (T-208)
+        McpGatingDemo.main(args);          // MCP tool gating (T-209)
+        OutputGuardrailDemo.main(args);    // schema output guardrail + reprompt (T-210)
+        Phase2EvalDemo.main(args);         // eval harness over a Phase-2 golden set (T-211)
+
+        System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");
     }
 }

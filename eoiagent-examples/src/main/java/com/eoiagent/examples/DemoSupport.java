@@ -1,8 +1,11 @@
 package com.eoiagent.examples;
 
 import com.eoiagent.app.reference.ReferenceApplicationPack;
+import com.eoiagent.core.AgentContext;
+import com.eoiagent.core.AppId;
 import com.eoiagent.core.DeploymentProfile;
 import com.eoiagent.core.Role;
+import com.eoiagent.core.SessionId;
 import com.eoiagent.core.UserId;
 import com.eoiagent.host.SessionRequest;
 import com.eoiagent.model.LlmGateway;
@@ -75,6 +78,17 @@ final class DemoSupport {
     static SessionRequest session(Role role) {
         return new SessionRequest(new UserId("demo-" + role.name().toLowerCase(Locale.ROOT)),
                 role, DeploymentProfile.OFFLINE, null, Map.of());
+    }
+
+    /** An {@link AgentContext} for the Phase-2 adapter demos (which call adapters directly, not via a session). */
+    static AgentContext context(Role role, DeploymentProfile profile) {
+        return context(role, profile, Map.of());
+    }
+
+    static AgentContext context(Role role, DeploymentProfile profile, Map<String, String> attributes) {
+        String who = "demo-" + role.name().toLowerCase(Locale.ROOT);
+        return new AgentContext(new AppId("acme"), new SessionId(who), new UserId(who),
+                role, profile, null, attributes);
     }
 
     static void header(String title) {
