@@ -27,6 +27,12 @@
       <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j</artifactId>
     </dependency>
+    <!-- MCP client (T-209). Version via langchain4j-bom; appears ONLY in McpToolAdapter, behind the
+         MCP_TOOLS feature flag (tool-registry spec, ADR-0010). -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-mcp</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

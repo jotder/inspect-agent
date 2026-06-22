@@ -67,6 +67,11 @@ public final class DefaultToolRegistry implements ToolRegistry {
         return approvalGate != null && config != null && config.featureEnabled(Feature.MUTATING_ACTIONS);
     }
 
+    /** True only when this registry has config AND the active profile/config enables MCP tools. */
+    private boolean mcpEnabled() {
+        return config != null && config.featureEnabled(Feature.MCP_TOOLS);
+    }
+
     @Override
     public void register(Tool tool) {
         Objects.requireNonNull(tool, "tool");
@@ -82,10 +87,14 @@ public final class DefaultToolRegistry implements ToolRegistry {
         Objects.requireNonNull(ctx, "ctx");
         List<ToolSpec> visible = new ArrayList<>();
         boolean mutatingEnabled = mutatingEnabled();
+        boolean mcpEnabled = mcpEnabled();
         for (Tool tool : byName.values()) {
             ToolSpec spec = tool.spec();
             if (spec.mutating() && !mutatingEnabled) {
                 continue; // mutating tools are hidden unless MUTATING_ACTIONS is enabled for this profile
+            }
+            if (tool instanceof McpTool && !mcpEnabled) {
+                continue; // MCP tools are hidden unless MCP_TOOLS is enabled for this profile (AC9)
             }
             if (!roleSatisfies(ctx.role(), spec.requiredRole())) {
                 continue;
@@ -115,6 +124,12 @@ public final class DefaultToolRegistry implements ToolRegistry {
             // enabled gate. Thrown before any approval or invoke (offline/feature-off fail-closed).
             throw new PolicyViolation("mutating tool '" + spec.name()
                     + "' requires the MUTATING_ACTIONS feature, which is not enabled");
+        }
+
+        if (tool instanceof McpTool && !mcpEnabled()) {
+            // Fail closed before any invoke — an MCP tool would reach the network (AC9).
+            throw new PolicyViolation("MCP tool '" + spec.name()
+                    + "' requires the MCP_TOOLS feature, which is not enabled");
         }
 
         String invalid = ArgumentValidator.validate(spec.jsonSchema(), call.arguments());
