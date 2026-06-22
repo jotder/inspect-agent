@@ -20,4 +20,8 @@ final class RecordingAuditSink implements AuditSink {
     List<AuditKind> kinds() {
         return events.stream().map(AuditEvent::kind).toList();
     }
+
+    List<String> summaries() {
+        return events.stream().map(AuditEvent::summary).toList();
+    }
 }

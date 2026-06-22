@@ -19,4 +19,8 @@ public final class RuntimeConfigKeys {
     /** Tool results larger than this (serialized bytes) are offloaded to the {@code Scratchpad}. */
     public static final ConfigKey<Integer> OFFLOAD_THRESHOLD_BYTES =
             new ConfigKey<>("eoiagent.runtime.offloadThresholdBytes", Integer.class, 8192);
+
+    /** Hard upper bound on sub-agent delegations the supervisor may make per run (Flow D). */
+    public static final ConfigKey<Integer> SUPERVISOR_MAX_WORKERS =
+            new ConfigKey<>("eoiagent.runtime.supervisor.maxWorkers", Integer.class, 3);
 }

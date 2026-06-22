@@ -16,7 +16,11 @@ final class FixedTool implements Tool {
     private final Object value;
 
     FixedTool(String name, Object value) {
-        this.spec = new ToolSpec(name, "test tool", "{}", false, Role.USER, Capability.READ_DOCS);
+        this(name, value, Capability.READ_DOCS, Role.USER, false);
+    }
+
+    FixedTool(String name, Object value, Capability capability, Role requiredRole, boolean mutating) {
+        this.spec = new ToolSpec(name, "test tool", "{}", mutating, requiredRole, capability);
         this.value = value;
     }
 

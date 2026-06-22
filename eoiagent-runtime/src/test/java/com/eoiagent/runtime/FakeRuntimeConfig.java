@@ -10,10 +10,16 @@ final class FakeRuntimeConfig implements ConfigProvider {
 
     private final int maxSteps;
     private final int offloadThresholdBytes;
+    private final int maxWorkers;
 
     FakeRuntimeConfig(int maxSteps, int offloadThresholdBytes) {
+        this(maxSteps, offloadThresholdBytes, 3);
+    }
+
+    FakeRuntimeConfig(int maxSteps, int offloadThresholdBytes, int maxWorkers) {
         this.maxSteps = maxSteps;
         this.offloadThresholdBytes = offloadThresholdBytes;
+        this.maxWorkers = maxWorkers;
     }
 
     @Override
@@ -29,6 +35,9 @@ final class FakeRuntimeConfig implements ConfigProvider {
         }
         if (key.name().equals(RuntimeConfigKeys.OFFLOAD_THRESHOLD_BYTES.name())) {
             return (T) Integer.valueOf(offloadThresholdBytes);
+        }
+        if (key.name().equals(RuntimeConfigKeys.SUPERVISOR_MAX_WORKERS.name())) {
+            return (T) Integer.valueOf(maxWorkers);
         }
         return key.defaultValue();
     }
