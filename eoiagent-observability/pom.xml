@@ -38,5 +38,12 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- JdbcAuditSink uses only java.sql/javax.sql; the driver is needed only to run the
+         (env-gated) Postgres integration test. Version from eoiagent-bom. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

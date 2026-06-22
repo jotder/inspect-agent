@@ -26,6 +26,7 @@
     <junit-bom.version>5.11.4</junit-bom.version>
     <assertj.version>3.27.3</assertj.version>
     <slf4j.version>2.0.17</slf4j.version>
+    <postgresql.version>42.7.4</postgresql.version>
   </properties>
 
   <dependencyManagement>
@@ -65,6 +66,14 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
+      </dependency>
+
+      <!-- PostgreSQL JDBC driver (T-206: JdbcAuditSink, PostgresMemoryStore). Driver is provided by
+           the host at runtime; modules use only java.sql/javax.sql and reference this at test scope. -->
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>${postgresql.version}</version>
       </dependency>
 
       <!-- eoiagent-* modules: inter-module deps need no explicit version. -->
