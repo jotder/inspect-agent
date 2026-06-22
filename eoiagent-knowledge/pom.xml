@@ -31,6 +31,12 @@
       <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j</artifactId>
     </dependency>
+    <!-- Production vector store (T-206, PGVECTOR-gated). Version via langchain4j-bom (>=1.16.3, CVE
+         fix); appears ONLY in the PgVectorStore adapter. Brings the PostgreSQL driver transitively. -->
+    <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-pgvector</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -40,6 +46,13 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- PostgreSQL JDBC driver for the env-gated PgVectorStore integration test (also pulled in
+         transitively by langchain4j-pgvector). Version from eoiagent-bom. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
