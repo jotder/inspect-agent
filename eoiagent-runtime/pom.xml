@@ -33,6 +33,12 @@
       <groupId>dev.langchain4j</groupId>
       <artifactId>langchain4j-agentic</artifactId>
     </dependency>
+    <!-- EXPERIMENTAL / single-maintainer (ADR-0005, ADR-0010): the LangGraph4j stateful-graph engine
+         lives ONLY in this adapter module (LangGraphOrchestrator, Flow E). Version from eoiagent-bom. -->
+    <dependency>
+      <groupId>org.bsc.langgraph4j</groupId>
+      <artifactId>langgraph4j-core</artifactId>
+    </dependency>
 
     <!-- Test-only concrete adapters to wire the loop end-to-end, offline. -->
     <dependency>

@@ -40,6 +40,20 @@
         <scope>import</scope>
       </dependency>
 
+      <!-- LangGraph4j (ADR-0005 / ADR-0010): Phase-3 stateful-orchestration engine. Single-maintainer,
+           pinned here; the only places these artifacts appear are the LangGraphOrchestrator adapter
+           (eoiagent-runtime) and the Postgres checkpoint saver (eoiagent-persistence). -->
+      <dependency>
+        <groupId>org.bsc.langgraph4j</groupId>
+        <artifactId>langgraph4j-core</artifactId>
+        <version>${langgraph4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.bsc.langgraph4j</groupId>
+        <artifactId>langgraph4j-langchain4j</artifactId>
+        <version>${langgraph4j.version}</version>
+      </dependency>
+
       <!-- Test libraries (conventions §8: JUnit 5 + AssertJ). -->
       <dependency>
         <groupId>org.junit</groupId>

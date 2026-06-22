@@ -23,4 +23,8 @@ public final class RuntimeConfigKeys {
     /** Hard upper bound on sub-agent delegations the supervisor may make per run (Flow D). */
     public static final ConfigKey<Integer> SUPERVISOR_MAX_WORKERS =
             new ConfigKey<>("eoiagent.runtime.supervisor.maxWorkers", Integer.class, 3);
+
+    /** Phase 3 (Flow E): save a {@code Checkpoint} after each graph node so the run survives restart. */
+    public static final ConfigKey<Boolean> CHECKPOINT_EVERY_NODE =
+            new ConfigKey<>("eoiagent.runtime.checkpoint.everyNode", Boolean.class, true);
 }
