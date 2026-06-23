@@ -4,29 +4,36 @@ import com.eoiagent.config.ConfigProvider;
 import com.eoiagent.core.AgentContext;
 import com.eoiagent.core.AnswerKind;
 import com.eoiagent.core.AppId;
+import com.eoiagent.core.ApprovalDecision;
 import com.eoiagent.core.AuditKind;
+import com.eoiagent.core.ConfigException;
 import com.eoiagent.core.ConfigKey;
 import com.eoiagent.core.DeploymentProfile;
 import com.eoiagent.core.Feature;
 import com.eoiagent.core.Goal;
 import com.eoiagent.core.GoalKind;
 import com.eoiagent.core.Role;
+import com.eoiagent.core.RunId;
 import com.eoiagent.core.SessionId;
 import com.eoiagent.core.UserId;
 import com.eoiagent.persistence.Checkpoint;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * The LangGraph4j-backed investigation orchestrator (Flow E, T-301): a cyclical
+ * The LangGraph4j-backed investigation orchestrator (Flow E): a cyclical
  * {@code gather → hypothesize → test → (loop | escalate | conclude)} graph that reaches the model only
- * through the {@code LlmGateway} port, terminates within a bounded round budget, audits every node,
- * and checkpoints after each node.
+ * through the {@code LlmGateway} port, terminates within a bounded round budget, audits every node, and
+ * checkpoints after each node (T-301). The escalate node is a human-in-the-loop breakpoint routed
+ * through the {@code ApprovalGate}, and a run can be resumed from its latest checkpoint (T-303).
  */
 class LangGraphOrchestratorTest {
 
@@ -39,8 +46,16 @@ class LangGraphOrchestratorTest {
         return new Goal("why is the orders pipeline failing?", GoalKind.INVESTIGATION);
     }
 
+    private static ScriptedApprovalGate approve() {
+        return new ScriptedApprovalGate(ApprovalDecision.APPROVED);
+    }
+
     private static List<String> nodeIds(List<Checkpoint> history) {
         return history.stream().map(Checkpoint::nodeId).toList();
+    }
+
+    private static byte[] json(String s) {
+        return s.getBytes(StandardCharsets.UTF_8);
     }
 
     @Test
@@ -52,7 +67,7 @@ class LangGraphOrchestratorTest {
                 .finalText("connection pool exhausted under load")     // hypothesize
                 .finalText("CONFIRMED");                               // testHypothesis
         LangGraphOrchestrator orch =
-                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store);
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store, approve());
 
         AgentRun run = orch.run(investigation(), ctx());
 
@@ -80,7 +95,7 @@ class LangGraphOrchestratorTest {
                 .finalText("hypothesis B")       // hypothesize (round 2)
                 .finalText("INCONCLUSIVE");      // testHypothesis (round 2) → budget spent → conclude
         LangGraphOrchestrator orch =
-                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(2, 8192), store);
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(2, 8192), store, approve());
 
         AgentRun run = orch.run(investigation(), ctx());
 
@@ -95,22 +110,87 @@ class LangGraphOrchestratorTest {
     }
 
     @Test
-    void escalateVerdict_routesThroughEscalateNodeBeforeConcluding() {
+    void breakpoint_approvedEscalation_routesThroughEscalateThenConcludes() { // T-303 HITL (approved)
         RecordingAuditSink audit = new RecordingAuditSink();
         RecordingCheckpointStore store = new RecordingCheckpointStore();
         ScriptedGateway gateway = new ScriptedGateway()
                 .finalText("repeated data-loss alerts")       // gatherSignals
                 .finalText("possible irreversible deletion")  // hypothesize
                 .finalText("ESCALATE");                        // testHypothesis → escalate
+        ScriptedApprovalGate gate = approve();
         LangGraphOrchestrator orch =
-                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store);
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store, gate);
 
         AgentRun run = orch.run(investigation(), ctx());
 
+        assertThat(gate.requestCalls).isEqualTo(1); // the breakpoint asked the gate before escalating
         assertThat(nodeIds(store.history(run.id())))
                 .containsExactly("gatherSignals", "hypothesize", "testHypothesis", "escalate", "conclude");
         assertThat(run.answer().text()).contains("escalated for human review");
-        assertThat(audit.summaries()).anyMatch(s -> s.contains("escalate: human review required"));
+        assertThat(audit.kinds()).contains(AuditKind.APPROVAL);
+        assertThat(audit.summaries()).anyMatch(s -> s.contains("escalate: human review approved"));
+    }
+
+    @Test
+    void breakpoint_deniedApproval_concludesWithoutEscalating() { // T-303 HITL (denied → fail closed)
+        RecordingAuditSink audit = new RecordingAuditSink();
+        RecordingCheckpointStore store = new RecordingCheckpointStore();
+        ScriptedGateway gateway = new ScriptedGateway()
+                .finalText("repeated data-loss alerts")
+                .finalText("possible irreversible deletion")
+                .finalText("ESCALATE");
+        ScriptedApprovalGate gate = new ScriptedApprovalGate(ApprovalDecision.DENIED);
+        LangGraphOrchestrator orch =
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store, gate);
+
+        AgentRun run = orch.run(investigation(), ctx());
+
+        assertThat(gate.requestCalls).isEqualTo(1);
+        // It still routes through the escalate node, but the denied gate means it does not escalate.
+        assertThat(nodeIds(store.history(run.id())))
+                .containsExactly("gatherSignals", "hypothesize", "testHypothesis", "escalate", "conclude");
+        assertThat(run.answer().text()).contains("escalation was not approved");
+        assertThat(audit.kinds()).contains(AuditKind.APPROVAL);
+    }
+
+    @Test
+    void resume_continuesFromNextNodeWithoutReRunningCompletedNodes() { // T-303 AC9
+        RecordingAuditSink audit = new RecordingAuditSink();
+        RecordingCheckpointStore store = new RecordingCheckpointStore();
+        RunId run = new RunId("inv-1");
+        // Simulate a crash after hypothesize: the store already holds gather + hypothesize checkpoints.
+        store.save(run, new Checkpoint(run, "gatherSignals",
+                json("{\"signals\":[\"elevated 5xx\"]}"), Instant.now(), 0));
+        store.save(run, new Checkpoint(run, "hypothesize",
+                json("{\"signals\":[\"elevated 5xx\"],\"hypothesis\":\"pool exhausted\"}"), Instant.now(), 1));
+
+        // Only testHypothesis remains to call the model (conclude makes no model call).
+        ScriptedGateway gateway = new ScriptedGateway().finalText("CONFIRMED");
+        LangGraphOrchestrator orch =
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store, approve());
+
+        AgentRun resumed = orch.resume(run, investigation(), ctx());
+
+        assertThat(resumed.id()).isEqualTo(run); // same run, not a new one
+        assertThat(resumed.answer().kind()).isEqualTo(AnswerKind.TEXT);
+        assertThat(resumed.answer().text()).contains("pool exhausted"); // carried from the resumed state
+        assertThat(gateway.chatCalls).isEqualTo(1); // gather + hypothesize were NOT re-run
+        // The resumed run continues the checkpoint sequence after the saved nodes.
+        List<Checkpoint> history = store.history(run);
+        assertThat(nodeIds(history))
+                .containsExactly("gatherSignals", "hypothesize", "testHypothesis", "conclude");
+        assertThat(history).extracting(Checkpoint::seq).containsExactly(0, 1, 2, 3);
+        assertThat(resumed.steps()).isEqualTo(2); // only testHypothesis + conclude executed this time
+    }
+
+    @Test
+    void resume_withNoCheckpoint_failsWithConfigException() {
+        LangGraphOrchestrator orch = new LangGraphOrchestrator(new ScriptedGateway(), new RecordingAuditSink(),
+                new FakeRuntimeConfig(12, 8192), new RecordingCheckpointStore(), approve());
+
+        assertThatThrownBy(() -> orch.resume(new RunId("missing"), investigation(), ctx()))
+                .isInstanceOf(ConfigException.class)
+                .hasMessageContaining("no checkpoint");
     }
 
     @Test
@@ -119,7 +199,7 @@ class LangGraphOrchestratorTest {
         RecordingCheckpointStore store = new RecordingCheckpointStore();
         ScriptedGateway gateway = new ScriptedGateway().failsWith(new RuntimeException("model down"));
         LangGraphOrchestrator orch =
-                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store);
+                new LangGraphOrchestrator(gateway, audit, new FakeRuntimeConfig(12, 8192), store, approve());
 
         AgentRun[] result = new AgentRun[1];
         assertThatCode(() -> result[0] = orch.run(investigation(), ctx())).doesNotThrowAnyException();
@@ -135,7 +215,7 @@ class LangGraphOrchestratorTest {
         ScriptedGateway gateway = new ScriptedGateway()
                 .finalText("signal").finalText("hypothesis").finalText("CONFIRMED");
         LangGraphOrchestrator orch =
-                new LangGraphOrchestrator(gateway, audit, new NoCheckpointConfig(), store);
+                new LangGraphOrchestrator(gateway, audit, new NoCheckpointConfig(), store, approve());
 
         AgentRun run = orch.run(investigation(), ctx());
 
