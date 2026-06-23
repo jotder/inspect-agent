@@ -11,18 +11,21 @@ Pack** that supplies that product's models, domain knowledge, tools, navigation,
 and config through a typed SPI. A new product = a new pack, not a fork of core — see
 [`docs/architecture/05-core-and-application-packs.md`](docs/architecture/05-core-and-application-packs.md).
 
-> **Status:** Phase 0 (foundations) and Phase 1 (MVP) are **implemented** — an 18-module Maven
-> reactor that builds green and runs **fully offline** (JDK 25, Maven). The CORE engine assembles a
-> working `AgentService` from an Application Pack via `eoiagent-platform`; the bundled **Acme
-> Lakehouse** reference pack ([`eoiagent-app-reference`](eoiagent-app-reference)) and the runnable
-> demos in [`eoiagent-examples`](eoiagent-examples) show it end-to-end. Phase 2 (planning, mutating
-> actions, delegation) is next. The agent-friendly specs in [`docs/`](docs/) remain the source of truth.
+> **Status:** Phases 0–2 are **implemented** and **Phase 3 has started** — an 18-module Maven reactor
+> that builds green and runs **fully offline** (JDK 25, Maven). The CORE engine assembles a working
+> `AgentService` from an Application Pack via `eoiagent-platform`; the bundled **Acme Lakehouse**
+> reference pack ([`eoiagent-app-reference`](eoiagent-app-reference)) and the runnable demos in
+> [`eoiagent-examples`](eoiagent-examples) show it end-to-end. Phase 2 added planning, **gated
+> mutating actions**, supervisor delegation, summarizing memory, advanced retrieval, MCP tools, and
+> output guardrails; Phase 3 begins with a checkpointed investigation orchestrator (LangGraph4j).
+> New here? Start with [`HOWTO.md`](HOWTO.md). The agent-friendly specs in [`docs/`](docs/) remain the source of truth.
 
 ## Start here
 
 | If you are… | Read |
 |-------------|------|
 | **An AI coding agent** | [`AGENTS.md`](AGENTS.md) — the build guide. |
+| **Building, running, or embedding it** | [`HOWTO.md`](HOWTO.md) — practical task-by-task guide. |
 | **Wanting to see it run** | [Try it — runnable demos](#try-it--runnable-demos) ([`eoiagent-examples`](eoiagent-examples)) |
 | New to the project | [`docs/architecture/00-overview.md`](docs/architecture/00-overview.md) |
 | Looking for the contracts | [`docs/architecture/01-component-model.md`](docs/architecture/01-component-model.md) + [`docs/architecture/02-domain-model.md`](docs/architecture/02-domain-model.md) |
@@ -58,18 +61,23 @@ docs/
 
 An 18-module Maven reactor (`mvn clean install`, JDK 25) — the CORE engine plus the reuse layer:
 
-- **CORE engine** — `eoiagent-core` (ports + domain types) with adapters in `eoiagent-config`,
+- **CORE engine** — `eoiagent-core` (ports + domain types) with adapters across `eoiagent-config`,
   `eoiagent-model` (LangChain4j chat/embeddings + an offline stub), `eoiagent-knowledge` (in-process
-  ONNX embeddings + in-memory vector store + ingestor/retriever), `eoiagent-tool`, `eoiagent-runtime`
-  (ReAct orchestrator), `eoiagent-memory`, `eoiagent-scratchpad`, `eoiagent-safety` (input
-  guardrails), `eoiagent-observability` (audit sinks), `eoiagent-host` (the `AgentService` facade),
-  and `eoiagent-eval` (golden-set harness).
+  ONNX embeddings, in-memory + pgvector stores, ingestor/retriever, advanced retrieval),
+  `eoiagent-tool` (read-only + mutating Java-API tools, MCP adapter, RBAC-enforcing registry with
+  approval routing), `eoiagent-runtime` (ReAct, supervisor/sub-agent, and a Phase-3 LangGraph4j
+  investigation orchestrator + planner/task-manager), `eoiagent-memory` (window + summarizing memory;
+  in-memory + Postgres stores), `eoiagent-scratchpad`, `eoiagent-safety` (input + output guardrails,
+  approval gate, role-based policy), `eoiagent-observability` (file / Slf4j / JDBC audit sinks),
+  `eoiagent-host` (the `AgentService` facade), and `eoiagent-eval` (golden-set harness).
 - **Reuse layer** — `eoiagent-app-api` (the typed Application Pack SPI), `eoiagent-platform`
   (`PlatformBuilder` — validates a pack and assembles the engine), `eoiagent-app-reference` (the
   worked **Acme Lakehouse** pack), and `eoiagent-examples` (runnable demos).
 
-> **Phase-1 scope:** the read-only RAG + tools + page-help path. Mutating actions behind approval,
-> stateful investigation, and end-to-end `NavigationIntent` emission arrive in later phases (roadmap below).
+> **Phase 2 (complete):** planning + task management, **gated mutating actions** (dry-run + human
+> approval + RBAC), supervisor/sub-agent delegation, summarizing memory, advanced retrieval, MCP
+> tools, and output guardrails. **Phase 3 (started):** a checkpointed, cyclical investigation
+> orchestrator on LangGraph4j — durable checkpoint stores, breakpoints/HITL, and time-travel are next.
 
 ## Try it — runnable demos
 
@@ -95,6 +103,16 @@ mvn -q -pl eoiagent-examples exec:java -Dexec.mainClass=com.eoiagent.examples.Qa
 | `NavigationDemo` | The navigation catalog and a validated `NavigationIntent` |
 | `PolicyAndProfilesDemo` | Host-role → `Role` mapping, capability grants, OFFLINE config |
 | `QaSessionDemo` | An end-to-end Q&A session with the recorded audit trail |
+| `MutatingApprovalDemo` | **Flow C** — dry-run → approve/deny a mutating action + RBAC enforcement |
+| `SupervisorDemo` | **Flow D** — a supervisor delegating to an isolated sub-agent |
+| `SummarizingMemoryDemo` | Condensing evicted turns into a running summary |
+| `AdvancedRetrievalDemo` | Query rewrite + routing + re-rank vs naive vector search |
+| `McpGatingDemo` | Gating MCP-backed tools on the `MCP_TOOLS` feature |
+| `OutputGuardrailDemo` | Schema output validation with a bounded reprompt (PASS/RETRY/FAIL) |
+| `Phase2EvalDemo` | Scoring an agent against a golden suite with the eval harness |
+
+For the task-by-task guide (build, embed in a host app, write a pack, enable Phase-2 capabilities,
+optional Postgres/Ollama/MCP), see [`HOWTO.md`](HOWTO.md).
 
 ## Tech at a glance
 
@@ -113,5 +131,6 @@ See [`docs/adr/`](docs/adr/) for the reasoning behind each of these.
 
 ## Roadmap (one line)
 
-Phase 0 Foundations → Phase 1 MVP (read-only RAG + tools + page help) → Phase 2 Planning +
-mutating actions + delegation → Phase 3 Stateful investigation + durability → Phase 4 Hardening.
+Phase 0 Foundations ✓ → Phase 1 MVP (read-only RAG + tools + page help) ✓ → Phase 2 Planning +
+mutating actions + delegation ✓ → Phase 3 Stateful investigation + durability **(in progress)** →
+Phase 4 Hardening.
