@@ -33,6 +33,23 @@
       <artifactId>eoiagent-model</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Phase-3 investigation eval (T-306): real T-304 tools through the real registry, and the
+         LangGraphOrchestrator + InMemoryCheckpointStore for the restart→resume assertion. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-tool</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-runtime</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-persistence</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

@@ -1,0 +1,49 @@
+suite: phase3-golden
+# Phase-3 golden set (T-306). Investigation scenarios scored OFFLINE against the REAL T-304
+# investigation tools (InvestigationApi/PlaybookApi) dispatched through the real read-only
+# DefaultToolRegistry: answers quote actual tool output, and tool calls are reconstructed from the
+# registry's own TOOL_CALL audit events (details.tool — hence presence/absence assertions, no
+# argsSubset). The restart→resume assertion lives beside this suite in Phase3EvalRunnerTest.
+cases:
+
+  - id: investigate-orders-daily-root-cause
+    prompt: "Investigate why the orders_daily pipeline is failing."
+    role: SUPPORT
+    page: { pageId: incident-detail, entityIds: { incidentId: "INC-2001" }, filters: {} }
+    tags: [phase3, investigation]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "schema drift" }
+      toolCalls:
+        - toolName: getPlaybook
+        - toolName: listEvents
+        - toolName: listAlerts
+        - toolName: getIncident
+        - toolName: runPipeline        # investigation is read-only — no mutating tool may run
+          mustBeAbsent: true
+
+  - id: investigate-playbook-pipeline-failure
+    prompt: "What is the playbook for a pipeline failure?"
+    role: SUPPORT
+    page: { pageId: incident-detail, entityIds: {}, filters: {} }
+    tags: [phase3, investigation, playbook]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "listEvents" }   # step 1 of the real playbook
+      toolCalls:
+        - toolName: getPlaybook
+        - toolName: triggerJob
+          mustBeAbsent: true
+
+  - id: investigate-active-high-alerts
+    prompt: "Which high-severity alerts are active right now?"
+    role: SUPPORT
+    page: { pageId: alerts, entityIds: {}, filters: { severity: "HIGH" } }
+    tags: [phase3, investigation, alerts]
+    expect:
+      expectedKind: TEXT
+      answer: { mode: CONTAINS, expected: "A-101" }        # the real alert id from the corpus
+      toolCalls:
+        - toolName: listAlerts
+        - toolName: runPipeline
+          mustBeAbsent: true
