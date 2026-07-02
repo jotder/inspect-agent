@@ -67,10 +67,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+This project has a **docs** knowledge graph at graphify-out/, generated locally by
+`node tools/graphify/generate.mjs` (custom format — **the pip `graphify` CLI cannot read it**;
+`graphify query/path/explain` fail with `KeyError: 'nodes'`. Do not run them here).
 
 Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- For codebase/architecture questions, orient via `graphify-out/GRAPH_REPORT.md` (link graph,
+  most-referenced docs, architecture/component tables) and `docs/index.md` (the OKF bundle index)
+  before broad greps or raw source browsing.
+- After modifying anything under `docs/`, run `node tools/okf/check.mjs` (must exit 0 — OKF v0.1
+  frontmatter conformance) and `node tools/graphify/generate.mjs` to regenerate the graph.
+- Generated `graphify-out/*` artifacts stay uncommitted by convention.

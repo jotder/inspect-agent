@@ -152,7 +152,7 @@ Implements **Flow 0 — Platform bootstrap** ([04-sequence-flows.md](../architec
 - **AC5** Two distinct packs (reference + a second stub pack) each `start()` independently and
   produce isolated tool/navigation/knowledge sets (no cross-leakage).
 - **AC6** `eoiagent-app-api` has **no** dependency on any core adapter module or third-party agent
-  lib (ArchUnit).
+  lib (architecture test).
 - **AC7** `AgentPlatform.close()` closes all `AutoCloseable` adapters.
 
 ## Test plan
@@ -161,7 +161,7 @@ Implements **Flow 0 — Platform bootstrap** ([04-sequence-flows.md](../architec
   (validates provider non-nullity, OFFLINE consistency, pageId uniqueness).
 - **Unit** `PackValidatorTest`, `PlatformBuilderTest` (with a `StubApplicationPack` +
   `StubLlmGateway`, no network/LLM).
-- **ArchUnit** `AppApiDependencyRulesTest` (AC6) + the core/pack direction rules from
+- **Architecture test** `AppApiDependencyRulesTest` (AC6) + the core/pack direction rules from
   [05 §6](../architecture/05-core-and-application-packs.md#6-dependency-direction-updated).
 - **Eval** the pack's golden set runs through the assembled platform (see
   [eval-harness.md](eval-harness.md)).

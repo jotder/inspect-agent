@@ -90,7 +90,7 @@ record GuardrailResult(GuardrailVerdict verdict, String message, String transfor
 | `RegexPiiGuardrail` *(optional fallback)* | ours — `eoiagent-safety` (no third-party) | Phase 1 | Pure-Java PII redaction (email/phone/SSN-style patterns) usable when the experimental dep is excluded; satisfies the same contract. |
 
 The `langchain4j-guardrails` import appears **only** in the `Lc4j*` adapter classes. Verified by the
-Phase-0 ArchUnit test (conventions §2). The adapters translate LC4j's guardrail result types into
+Phase-0 architecture test (conventions §2). The adapters translate LC4j's guardrail result types into
 our `GuardrailResult`/`GuardrailVerdict` — LC4j types never cross the port boundary.
 
 ## Maven coordinates
@@ -199,7 +199,7 @@ unchecked input/output through). A `RETRY` that never converges escalates to `FA
 - **AC4** No `check` call performs a network call in any profile (asserted under the network-deny
   harness) — verifies Flow invariant #3 for guardrails.
 - **AC5** The `langchain4j-guardrails` package is referenced **only** from `Lc4j*` adapter classes
-  (ArchUnit assertion); `GuardrailResult` carrying LC4j types never crosses the port.
+  (architecture-test assertion); `GuardrailResult` carrying LC4j types never crosses the port.
 - **AC6** `RegexPiiGuardrail` (fallback) passes the same `GuardrailContractTest` as
   `Lc4jInputGuardrail` for the PII cases, proving the contract holds without the experimental dep.
 - **AC7** `check` is deterministic: identical `GuardrailInput` yields identical `GuardrailResult`.
@@ -215,7 +215,7 @@ stub `LlmGateway` (conventions §8) and is profile-tagged.
   `src/test/resources`.
 - **Contract** — `GuardrailContractTest`: abstract JUnit 5 class with one `@Test` per verdict
   (`PASS`/`FAIL`/`REDACTED`/`RETRY`); every adapter extends it (AC6 reuses it).
-- **Architecture** — `GuardrailIsolationArchTest` (AC5): ArchUnit rule that `langchain4j-guardrails`
+- **Architecture** — `GuardrailIsolationArchTest` (AC5): dependency-rule test asserting `langchain4j-guardrails`
   classes are imported only by `com.eoiagent.safety.*Lc4j*` adapters.
 - **Network-deny** — `GuardrailOfflineTest` (AC4) under the shared network-deny harness.
 

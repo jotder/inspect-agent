@@ -213,7 +213,7 @@ Sample resources (under `src/main/resources/acme/`): `docs/` (product help text)
 - **This module:** `com.eoiagent:eoiagent-app-reference` (version via parent `0.1.0-SNAPSHOT`).
 - **Dependencies (only):** `com.eoiagent:eoiagent-app-api` (the SPI) + `com.eoiagent:eoiagent-bom`
   (import-scope, pins everything). **No** core adapter module, **no** LangChain4j, **no**
-  experimental libs — enforced by ArchUnit ([05 §6](../architecture/05-core-and-application-packs.md#6-dependency-direction-updated)).
+  experimental libs — enforced by architecture tests ([05 §6](../architecture/05-core-and-application-packs.md#6-dependency-direction-updated)).
   Versions never hardcoded ([conventions §1](../conventions.md#1-module-layout-maven-multi-module)).
 - Built/assembled by `com.eoiagent:eoiagent-platform`; tests pull `eoiagent-platform` +
   `eoiagent-eval` (test scope) to run the golden set against an assembled `AgentService`.
@@ -315,7 +315,7 @@ The pack itself returns only data, but it is written to **pass `PackValidator`**
 7. **AC7** `config().profile()==OFFLINE` and `modelProfile().routing().allowHostedFallback()==false`
    (the pack passes `PackValidator` — AC3 of [application-pack.md](application-pack.md#acceptance-criteria)).
 8. **AC8** `eoiagent-app-reference` declares **no** dependency on any core adapter module or
-   third-party agent lib — only `eoiagent-app-api` + `eoiagent-bom` (ArchUnit).
+   third-party agent lib — only `eoiagent-app-api` + `eoiagent-bom` (architecture test).
 9. **AC9** `promptProfile().systemPrompt(k)` is non-null for **every** `GoalKind k`.
 
 ## Test plan
@@ -333,7 +333,7 @@ All tests run **offline, no live LLM** — the platform is assembled with a `Stu
 - **Eval** — `AcmeGoldenCases` (an `EvalSuite`, [eval-harness.md](eval-harness.md)): a small
   **all-`TEXT`** golden set run under OFFLINE (Phase 1). The navigation case (AC3) and a cited QA
   case (AC2) are **deferred to Phase 2** — see the Phase-1 scope note above.
-- **ArchUnit** — `ReferencePackDependencyRulesTest` (AC8).
+- **Architecture** — `ReferencePackDependencyRulesTest` (AC8).
 - **Verify:** `mvn -q -pl eoiagent-app-reference test` (default profile, no network).
 
 ## Dependencies on other modules

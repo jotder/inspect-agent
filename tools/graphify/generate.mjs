@@ -17,7 +17,7 @@ const toPosix = (p) => p.split("\\").join("/");
 // ---------- collect markdown files ----------
 function walk(dir, acc = []) {
   for (const entry of readdirSync(dir)) {
-    if (entry === "node_modules" || entry === ".git" || entry === "graphify-out" || entry === ".claude") continue;
+    if (entry === "node_modules" || entry === ".git" || entry === "graphify-out" || entry === ".claude" || entry === "target") continue;
     const full = join(dir, entry);
     const st = statSync(full);
     if (st.isDirectory()) walk(full, acc);

@@ -63,14 +63,14 @@ tags: ["roadmap"]
 - Exception hierarchy (`EoiAgentException` + subtypes).
 - `eoiagent-app-api`: the **Application Pack SPI** (interfaces + records, compile-only) +
   `eoiagent-platform` (`PlatformBuilder`/`AgentPlatform` + `PackValidator`).
-- **ArchUnit** architecture tests (dependency direction; no agent framework in `core`; **core
+- **Architecture tests** (JDK Class-File API; dependency direction; no agent framework in `core`; **core
   never imports a pack**; `eoiagent-app-api` imports only core domain types).
 - `ConfigProvider` + adapters + the capability matrix / `featureEnabled` gating.
 - A deterministic **stub `LlmGateway`** + test fixtures (so all later tests run with no network /
   no live LLM).
 - `eoiagent-eval` harness scaffold (case loader + runner).
 
-**Exit criteria:** `mvn verify` green with empty adapters; ArchUnit rules (incl. core/pack
+**Exit criteria:** `mvn verify` green with empty adapters; architecture-test rules (incl. core/pack
 direction) enforced; the SPI compiles and `PlatformBuilder.start()` wires a stub pack; stub
 gateway + eval scaffold usable; capability matrix unit-tested per profile.
 
@@ -170,9 +170,12 @@ regression baseline enforced in CI; artifact consumable by the host build.
 These were flagged "not sure" and can be decided without re-forking the architecture (the ports
 absorb them):
 
-- **Task durability scope** — confirmed handled by the Phase-3 `CheckpointStore` + LangGraph4j
-  adapter; if early durability is needed, pull `InMemoryCheckpointStore` into Phase 2.
-- **Licensing/compliance regime** — confirm Apache-2/MIT-only policy; both substrates qualify
-  (LangChain4j Apache-2, LangGraph4j MIT). Record as an ADR if a regime is mandated.
+- **Task durability scope** — **RESOLVED (2026-07):** shipped as T-302 (`InMemoryCheckpointStore`
+  + `PostgresCheckpointStore`) and T-303 (breakpoints/HITL/time-travel) behind the
+  `Orchestrator`/`CheckpointStore` ports.
+- **Licensing/compliance regime** — **recorded as
+  [ADR-0012](../adr/0012-permissive-licensing-policy.md)** (permissive-only: Apache-2.0/MIT/BSD;
+  status Proposed pending stakeholder confirmation). Both substrates qualify
+  (LangChain4j Apache-2, LangGraph4j MIT).
 - **Definition of done / labeled set** — bootstrapped by [`../specs/eval-harness.md`](../specs/eval-harness.md);
   grow the golden set each phase.

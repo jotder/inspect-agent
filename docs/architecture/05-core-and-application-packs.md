@@ -129,7 +129,7 @@ CORE never depends on any Application Pack. The Pack depends only on eoiagent-ap
 Experimental deps stay quarantined in core adapter modules (ADR-0010) — a pack never sees them.
 ```
 
-ArchUnit rules (extend the Phase-0 set): (a) `eoiagent-app-api` imports only `eoiagent-core`
+Architecture-test rules (extend the Phase-0 set): (a) `eoiagent-app-api` imports only `eoiagent-core`
 domain types; (b) no `com.eoiagent.app.*` reference appears in any core module; (c) a pack module
 imports `com.eoiagent.app` + domain types only — not core adapters.
 

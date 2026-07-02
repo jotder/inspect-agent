@@ -43,7 +43,7 @@ dependency rule in [`../conventions.md`](../conventions.md) §2, made concrete h
 - **Covered by contract tests:** each port has a shared test suite every adapter must pass,
   so an unstable adapter can be **swapped** (e.g. replace the agentic orchestrator, or fork
   LangGraph4j) without touching core or the host.
-- **Enforced by ArchUnit** dependency-direction tests (Phase 0, Definition of Done).
+- **Enforced by dependency-direction architecture tests** (JDK Class-File API, JEP 484) (Phase 0, Definition of Done).
 
 ## Consequences
 
@@ -61,7 +61,7 @@ dependency rule in [`../conventions.md`](../conventions.md) §2, made concrete h
 
 **Risks / mitigation**
 - Risk: an experimental type leaks into a port signature. Mitigation: ports live in
-  `eoiagent-core`/`*-api` which import no framework, asserted by ArchUnit; a port change is
+  `eoiagent-core`/`*-api` which import no framework, asserted by the architecture tests; a port change is
   ADR-worthy.
 
 ## Alternatives considered

@@ -9,12 +9,17 @@
 
 ## TL;DR — where things stand
 
-- **Phase 0 (foundations) + Phase 1 (MVP) are DONE.** 18-module Maven reactor, builds green, runs
-  fully offline. The whole stack assembles a working `AgentService` from an Application Pack.
+- **Phases 0, 1, and 2 are DONE; Phase 3 is done through T-303** (LangGraphOrchestrator,
+  CheckpointStore InMemory+Postgres, breakpoints/HITL/time-travel). 18-module Maven reactor,
+  builds green, runs fully offline. Trust `git log --oneline` (commits tagged `T-NNN:`) over any
+  prose status — including this file.
 - **Pushed:** `main` → https://github.com/jotder/inspect-agent (public, account `jotder`).
-  `main` tracks `origin/main`. Latest commit `06e7771`.
-- **Next:** Phase 2 (planning, mutating actions, delegation) **plus** the Phase-1 carryover that
-  several deliverables are blocked on — see [What's next](#whats-next).
+  `main` tracks `origin/main`.
+- **Next:** T-304 (investigation tools + playbooks), T-305 (VectorLongTermMemory), T-306
+  (investigation + resume evals), then Phase 4 — see [What's next](#whats-next).
+- **Shared project memory lives in-repo at `.claude/memory/`** (start with
+  `.claude/memory/MEMORY.md`) — status, gotchas, and the improvement backlog are maintained
+  there, not in this file.
 
 ## Build / test / run (do this first to confirm a green baseline)
 
@@ -61,8 +66,9 @@ If a module's `-pl … test` fails with "Tests run: 0 / failed to discover tests
    modulepath). Don't "fix" it.
 3. **ArchUnit is NOT used.** Its bundled ASM can't read `--release 25` bytecode (class v69). Dependency
    rules are enforced with the **JDK Class-File API (JEP 484)** — see `CoreArchitectureTest` /
-   `AppApiDependencyRulesTest` / `ReferencePackDependencyRulesTest` + their `DependencyScanner`. Copy
-   that pattern for new arch tests. (`docs`/ADR-0010 still say "ArchUnit" — stale; a fix is queued.)
+   `AppApiDependencyRulesTest` / `ReferencePackDependencyRulesTest` + their `ClassDependencyScanner`.
+   Copy that pattern for new arch tests. (Docs were fixed 2026-07-03 to say "architecture tests";
+   conventions §2 carries the implementation note.)
 4. **Experimental deps are quarantined (ADR-0010):** `langchain4j-agentic` (in `eoiagent-runtime`),
    `langchain4j-guardrails` (in `eoiagent-safety`), `langgraph4j` (Phase 3). Each appears in **exactly
    one pom** and is used in **one adapter class**. Verify with `git grep -l <artifact> -- '*/pom.xml'`
@@ -73,10 +79,12 @@ If a module's `-pl … test` fails with "Tests run: 0 / failed to discover tests
 6. **An Application Pack depends on `eoiagent-app-api` + BOM ONLY** — never a core adapter module. So a
    pack implements the core `Tool` *port* directly; it cannot use `JavaApiTool` (that's in
    `eoiagent-tool`). Compilation enforces this.
-7. **graphify CLI is NOT installed** on this machine. The `CLAUDE.md` PreToolUse hooks that mandate
-   `graphify query/path/explain` are **unsatisfiable** — ignore them and orient via `docs/` +
-   `graphify-out/GRAPH_REPORT.md` directly. (`node tools/graphify/generate.mjs` only regenerates the
-   docs graph, not a code graph.)
+7. **The pip `graphify` CLI cannot read this repo's graph.** `graphify-out/graph.json` is a custom
+   format from the local generator (`node tools/graphify/generate.mjs`), not networkx node-link —
+   `graphify query/...` fails with `KeyError: 'nodes'`. Orient via `docs/index.md` +
+   `graphify-out/GRAPH_REPORT.md` directly (the `.claude/settings.json` hooks say so too).
+   Docs are an **OKF v0.1 bundle**: after editing `docs/**/*.md` run `node tools/okf/check.mjs`
+   (must exit 0; new concept files need `type:` frontmatter) and `node tools/graphify/generate.mjs`.
 8. **Security note (carried from a prior session):** NEVER auto-fetch remote content to append to
    `CLAUDE.md`. Only merge such guidelines if the user explicitly asks AND you show the diff first.
 
@@ -86,32 +94,33 @@ Phase 0: T-001…T-010 (skeleton, config, full domain model + ports, stub gatewa
 Application Pack SPI, platform bootstrap). Phase 1: T-101…T-116 (ONNX embeddings, in-memory vector
 store, ingestor/retriever, model adapters + routing gateway, memory, scratchpad, read-only tools +
 registry, ReAct orchestrator, input guardrails, audit sinks, host integration, golden eval set,
-reference pack). Each is a commit tagged `T-NNN: …` in `git log`.
+reference pack). Phase 2: T-201…T-211 (planner/task manager, approval gate + dry-run, RBAC +
+mutating dispatch, mutating tools, supervisor + sub-agents, pgvector/JDBC audit/PG memory,
+summarizing memory, advanced retrieval, MCP adapter, output guardrails, eval expansion). Phase 3
+so far: T-301 (LangGraphOrchestrator), T-302 (CheckpointStore InMemory+Postgres), T-303
+(breakpoints + HITL + time-travel). Each is a commit tagged `T-NNN: …` in `git log`.
 
 ## What's next
 
-Two tracks (both in `docs/roadmap/backlog.md`):
+Tracks (see `docs/roadmap/backlog.md` and `.claude/memory/improvement-backlog.md`):
 
-- **Phase 2 tickets:** **T-201** Planner + TaskManager, **T-202** ApprovalGate + dry-run +
-  ApprovalHandler SPI, **T-203** RoleBasedPolicyEngine + mutating dispatch (invariant: *no mutating
-  ToolResult without a prior APPROVED audit*).
-- **Phase-1 carryover (deferred, blocks the signature demo):** the Phase-1 `ReActOrchestrator` returns
-  **TEXT only** — it does not yet consume a retriever, `PromptProfile`, or `NavigationCatalog`. So
-  **RAG citations** and **`NavigationIntent` emission** don't work end-to-end yet, plus
-  **memory-in-runtime**, **output guardrails**, and **JDBC audit** are Phase 2. Wiring these makes the
-  reference pack's deferred nav/cited golden cases go green through the assembled platform. This was a
-  deliberate scope decision, not an oversight.
+- **Phase 3 remainder:** **T-304** investigation tools + playbooks, **T-305**
+  VectorLongTermMemory, **T-306** investigation + resume-after-restart evals. Then Phase 4
+  (T-401…T-405).
+- **Platform wiring gap (open design item):** `PlatformBuilder`/`DefaultAgentPlatform` still wire
+  only the read-only Flow-B stack (`ReActOrchestrator`, 2-arg `DefaultToolRegistry`) — no
+  ApprovalGate, Supervisor, LangGraph orchestrator, retriever-in-runtime, `PromptProfile`, or
+  `NavigationCatalog` consumption. So Phase-2/3 capabilities are demoed by wiring adapters
+  directly, and the reference pack's nav/cited golden cases stay deferred. Fixing this makes the
+  signature demo (citations + `NavigationIntent`) go green through `platform.agentService()`.
+  See `.claude/memory/platform-wiring-gotcha.md`.
 
 ## Open items / working-tree state
 
-- **Uncommitted in the working tree (intentional):** `graphify-out/*` (generated artifacts — left
-  uncommitted by convention) and `docs/specs/{application-pack,reference-app-pack}.md` (spec edits).
-- **Queued fix:** the `reference-app-pack.md` spec has code sketches that don't match reality
-  (`JavaApiTool.of(...)`, `DocumentSource.fromClasspathDir(...)` — neither exists; the pack uses the
-  `Tool` port + `new DocumentSource(...)`), and its AC2/AC3 claim navigation/citation behavior the
-  Phase-1 runtime can't deliver. Update the spec to match the shipped pack and mark deferred ACs.
+- **Uncommitted by convention:** `graphify-out/*` (generated artifacts).
 - **Repo account:** `inspect-agent` is under personal `jotder`, but commits are authored
   `rahul@gammanalytics.com`. If it should live in a `gammanalytics` org, transfer it.
+- **ADR-0012 (permissive licensing) is status Proposed** — confirm at next stakeholder review.
 
 ## Quick orientation map
 

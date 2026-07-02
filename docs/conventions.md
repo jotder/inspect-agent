@@ -39,7 +39,11 @@ eoiagent-platform consumes a pack + core adapters; CORE never imports a pack.
 - Experimental deps (`langchain4j-agentic`, `langchain4j-guardrails`, `org.bsc.langgraph4j:*`,
   vector-store/LLM-specific artifacts) appear **only** inside a core adapter module (a pack never
   sees them). See [ADR-0010](adr/0010-isolate-experimental-deps.md).
-- Add architecture tests (ArchUnit) asserting all of these rules; part of Phase 0.
+- Add architecture tests asserting all of these rules; part of Phase 0.
+  **Implementation note:** ArchUnit is *not* used — its bundled ASM cannot read `--release 25`
+  bytecode (class-file v69). Rules are enforced with the JDK Class-File API (JEP 484): see
+  `CoreArchitectureTest`, `AppApiDependencyRulesTest`, `ReferencePackDependencyRulesTest` and
+  their `ClassDependencyScanner`. Copy that pattern for new architecture tests.
 
 ## 3. Naming
 

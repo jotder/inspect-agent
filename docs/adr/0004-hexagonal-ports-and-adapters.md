@@ -56,7 +56,7 @@ Organize the platform as **Hexagonal Ports & Adapters**:
   Ports never import adapters. **Core imports no agent framework** (no LangChain4j, no
   LangGraph4j, no MCP).
 - Changing a port signature is an **ADR-worthy event**.
-- **Enforced by ArchUnit tests** (dependency direction, no-framework-in-core) that are part
+- **Enforced by architecture tests** (JDK Class-File API dependency-rule tests: dependency direction, no-framework-in-core) that are part
   of Phase 0 and the per-ticket Definition of Done.
 
 This is the single most important decision for *AI-agent-built* code: contracts are fixed,
@@ -77,7 +77,7 @@ behind ports.
   `EmbeddingStore`); the indirection is deliberate, to preserve swappability.
 
 **Risks / mitigation**
-- Risk: ports drift toward leaking adapter concepts. Mitigation: ArchUnit rules plus the
+- Risk: ports drift toward leaking adapter concepts. Mitigation: architecture-test rules plus the
   "port change = ADR" rule keep the boundary honest.
 
 ## Alternatives considered

@@ -57,7 +57,7 @@ A bundled reference pack (`eoiagent-app-reference`) is the copy-to-start templat
 - The SPI surface must stay stable; changing it is ADR-worthy like any port.
 
 **Follow-ups**
-- Extend ArchUnit rules: `eoiagent-app-api` imports only core domain types; no `com.eoiagent.app`
+- Extend the architecture-test rules: `eoiagent-app-api` imports only core domain types; no `com.eoiagent.app`
   reference inside core; a pack imports only the SPI + domain types (not core adapters).
 - Phase 0 adds `eoiagent-app-api` + `eoiagent-platform`; Phase 1 ships the reference pack and
   demos the MVP through it.

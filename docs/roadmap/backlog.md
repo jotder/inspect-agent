@@ -55,7 +55,7 @@ LLM** (stub `LlmGateway`).
 - **AC1** all extend `EoiAgentException`. **AC2** each carries a message + optional cause.
 - **Verify:** `mvn -q -pl eoiagent-core test`
 
-### T-005 · Architecture tests (ArchUnit)
+### T-005 · Architecture tests (JDK Class-File API)
 - **Module:** `eoiagent-core` (test) · **Spec:** [conventions §2](../conventions.md), [ADR-0004](../adr/0004-hexagonal-ports-and-adapters.md) · **Depends-on:** T-003
 - Rules: adapters → ports only; **no** `dev.langchain4j`/`org.bsc.langgraph4j` import in
   `eoiagent-core`; experimental deps only in adapter modules ([ADR-0010](../adr/0010-isolate-experimental-deps.md)).
@@ -90,7 +90,7 @@ LLM** (stub `LlmGateway`).
 - Declare `ApplicationPack` + the 7 provider interfaces + records (`PackMetadata`, `ModelProfile`,
   `KnowledgeSource`, `ToolProvider`, `NavigationCatalog`, `PromptProfile`, `PolicyProfile`,
   `PackConfig`) verbatim from the domain model. Compile-only SPI.
-- **AC1** signatures match [02-domain-model §Application Pack SPI](../architecture/02-domain-model.md#application-pack-spi--comeoiagentapp). **AC2** `eoiagent-app-api` imports **only** `eoiagent-core` domain types (ArchUnit). **AC3** no agent-framework or core-adapter import.
+- **AC1** signatures match [02-domain-model §Application Pack SPI](../architecture/02-domain-model.md#application-pack-spi--comeoiagentapp). **AC2** `eoiagent-app-api` imports **only** `eoiagent-core` domain types (architecture test). **AC3** no agent-framework or core-adapter import.
 - **Verify:** `mvn -q -pl eoiagent-app-api test`
 
 ### T-010 · Platform bootstrap (`eoiagent-platform`)
@@ -203,7 +203,7 @@ LLM** (stub `LlmGateway`).
   through `PlatformBuilder.pack(new ReferenceApplicationPack()).start()`. Ship its own golden set.
 - **AC1** the assembled `AgentService` answers a sample Q&A and returns a valid `NavigationIntent`
   to a catalog page, offline. **AC2** pack depends on `eoiagent-app-api` + `eoiagent-bom` only
-  (ArchUnit). **AC3** the reference golden set passes in OFFLINE CI. **AC4** serves as the
+  (architecture test). **AC3** the reference golden set passes in OFFLINE CI. **AC4** serves as the
   copy-to-start template for a real product pack.
 - **Verify:** `mvn -q -pl eoiagent-app-reference test`
 
