@@ -27,6 +27,14 @@
       <artifactId>langchain4j</artifactId>
     </dependency>
 
+    <!-- VectorLongTermMemory (T-305) consumes only core ports (VectorStore, LlmGateway) in main;
+         the knowledge module is needed only to run its test against the real InMemoryVectorStore. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-knowledge</artifactId>
+      <scope>test</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
