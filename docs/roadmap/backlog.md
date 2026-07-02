@@ -1,3 +1,10 @@
+---
+type: roadmap
+title: "Backlog — Agent-Sized Tickets"
+description: "Each ticket is sized for one agent session: a single module/adapter + its tests."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["backlog"]
+---
 # Backlog — Agent-Sized Tickets
 
 > Each ticket is sized for **one agent session**: a single module/adapter + its tests. Pick the

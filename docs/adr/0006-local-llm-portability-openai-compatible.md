@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0006: Standardize local/on-prem model access on the OpenAI-compatible baseUrl client"
+description: "Architecture decision: Standardize local/on-prem model access on the OpenAI-compatible baseUrl client."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["local-llm-portability-openai-compatible"]
+---
 # ADR-0006: Standardize local/on-prem model access on the OpenAI-compatible baseUrl client
 
 - **Status:** Accepted

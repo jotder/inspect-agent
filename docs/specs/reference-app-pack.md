@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Reference Application Pack — Spec"
+description: "A worked, copy-to-start `ApplicationPack` for a fictional \"Acme Lakehouse Suite\", runnable fully offline."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["reference-app-pack"]
+---
 # Reference Application Pack — Spec
 
 > A worked, copy-to-start `ApplicationPack` for a fictional **"Acme Lakehouse Suite"**, runnable
@@ -63,27 +70,46 @@ final class ReferenceModelProfile implements ModelProfile {
 final class SchemaConfigSource implements KnowledgeSource {
     public String     id()      { return "acme-schemas"; }
     public SourceKind kind()    { return SourceKind.SCHEMA_CONFIG; }
-    public IngestOptions options() { return IngestOptions.defaults(); }   // 512/64, sourceType meta
-    public List<DocumentSource> resolve() {
-        return DocumentSource.fromClasspathDir("/acme/schemas/");          // sample .yaml descriptors
+    public IngestOptions options() { return IngestOptions.defaults(); }   // 1000/200, idempotent
+    public List<DocumentSource> resolve() {                               // explicit file URIs (no dir factory)
+        return List.of(
+            new DocumentSource("/acme/schemas/orders.yaml",    "application/yaml", Map.of("title", "orders schema")),
+            new DocumentSource("/acme/schemas/customers.yaml", "application/yaml", Map.of("title", "customers schema")));
     }
-}   // ProductDocSource → PRODUCT_DOC "/acme/docs/"; PipelineConfigSource → CONFIG_FILE "/acme/pipelines/"
+}   // ProductDocSource → PRODUCT_DOC (/acme/docs/*.md); PipelineConfigSource → CONFIG_FILE (/acme/pipelines/*.yaml)
 ```
 
 ```java
-// ToolProvider — read-only Java-API @Tool methods only (Phase 1). No MCP servers in OFFLINE.
+// ToolProvider — three read-only tools that implement the core com.eoiagent.tool.Tool PORT directly.
+// The pack depends on eoiagent-app-api + eoiagent-bom ONLY (AC8), so it CANNOT use JavaApiTool — that
+// helper lives in the eoiagent-tool ADAPTER module. No MCP servers in OFFLINE.
 final class ReferenceToolProvider implements ToolProvider {
-    public List<Tool> tools() { return List.of(
-        JavaApiTool.of(new AcmeReadTools()::listDatasets,
-            new ToolSpec("listDatasets", "List datasets in a lakehouse zone", LIST_DS_SCHEMA,
-                /*mutating=*/false, Role.USER,   Capability.READ_METADATA)),
-        JavaApiTool.of(new AcmeReadTools()::describeSchema,
-            new ToolSpec("describeSchema", "Columns + types for a dataset", DESCRIBE_SCHEMA,
-                false, Role.ANALYST, Capability.READ_SCHEMA)),
-        JavaApiTool.of(new AcmeReadTools()::getPipelineStatus,
-            new ToolSpec("getPipelineStatus", "Last run status of an ETL pipeline", STATUS_SCHEMA,
-                false, Role.USER,   Capability.READ_METADATA))); }
+    public List<Tool> tools()              { return AcmeReadTools.tools(); }
     public List<McpServerRef> mcpServers() { return List.of(); }          // none offline
+}
+
+// AcmeReadTools — builds the three Tools. Each is a CannedTool: a Tool-port impl pairing a fixed
+// ToolSpec with a pure function that returns a canned ToolResult, so the demo runs without a live
+// lakehouse. An unknown id yields an ok=false ToolResult, never a throw (tool-registry contract).
+final class AcmeReadTools {
+    static List<Tool> tools() { return List.of(listDatasets(), describeSchema(), getPipelineStatus()); }
+
+    private static Tool listDatasets() {
+        ToolSpec spec = new ToolSpec("listDatasets", "List datasets in a lakehouse zone",
+            "{\"type\":\"object\",\"properties\":{\"zone\":{\"type\":\"string\"}}}",
+            /*mutating=*/false, Role.USER, Capability.READ_METADATA);
+        return new CannedTool(spec, call ->
+            ok(Map.of("zone", arg(call, "zone", "curated"),
+                      "datasets", List.of("orders", "customers", "revenue_daily"))));
+    }   // describeSchema → Role.ANALYST/READ_SCHEMA; getPipelineStatus → Role.USER/READ_METADATA
+
+    /** A Tool whose behaviour is a fixed spec plus a pure function over the call. */
+    private record CannedTool(ToolSpec spec, Function<ToolCall, ToolResult> body) implements Tool {
+        public ToolResult invoke(ToolCall call) { return body.apply(call); }
+    }
+    private static ToolResult ok(Object v)      { return new ToolResult(true, v, null, Map.of()); }
+    private static ToolResult error(String msg) { return new ToolResult(false, null, msg, Map.of()); }
+    // arg(call, key, fallback): reads call.arguments().get(key) with a default (see AcmeReadTools.java)
 }
 ```
 
@@ -172,7 +198,7 @@ final class ReferencePackConfig implements PackConfig {
 | `ReferenceApplicationPack` | root SPI impl | returns the eight providers |
 | `ReferenceModelProfile` | `ModelProfile` | OFFLINE: Ollama `qwen2.5` chat + ONNX `all-MiniLM` embedding, no hosted fallback |
 | `ProductDocSource` / `SchemaConfigSource` / `PipelineConfigSource` | `KnowledgeSource` | classpath sample corpus (`PRODUCT_DOC` / `SCHEMA_CONFIG` / `CONFIG_FILE`) |
-| `ReferenceToolProvider` + `AcmeReadTools` | `ToolProvider` + `@Tool` methods | 3 read-only tools: `listDatasets`, `describeSchema`, `getPipelineStatus` |
+| `ReferenceToolProvider` + `AcmeReadTools` | `ToolProvider` + `Tool`-port impls (`CannedTool`) | 3 read-only tools: `listDatasets`, `describeSchema`, `getPipelineStatus` |
 | `ReferenceNavigationCatalog` | `NavigationCatalog` | `kpi-dashboard`, `pipeline-detail`, `incident-detail` |
 | `ReferencePromptProfile` | `PromptProfile` | persona + per-`GoalKind` prompts + glossary |
 | `ReferencePolicyProfile` | `PolicyProfile` | viewer/engineer/admin → `Role`, capability grants |
@@ -216,8 +242,9 @@ What each provider returns, end to end:
   (`mutating=false`, a `requiredRole`, a `Capability`); `mcpServers()` empty (OFFLINE).
   Returning canned sample results so the demo runs without a live lakehouse.
 - **`navigationCatalog()`** → three `PageDescriptor`s; `find(pageId)` powers
-  `NavigationIntent` validation. A "show me revenue" query routes to `kpi-dashboard` with
-  `{metric=revenue}` ([host-integration.md §Navigation answer](host-integration.md#navigation-answer-the-primary-path)).
+  `NavigationIntent` validation. Runtime routing of a "show me revenue" query to `kpi-dashboard`
+  with `{metric=revenue}` is **Phase 2** — the Phase-1 orchestrator emits no `NavigationIntent`
+  (see Acceptance criteria) ([host-integration.md §Navigation answer](host-integration.md#navigation-answer-the-primary-path)).
 - **`promptProfile()`** → persona + a non-null `systemPrompt` for **every** `GoalKind` (Flow-A
   navigation heuristic baked in) + a small glossary.
 - **`policyProfile()`** → `mapRole` total (viewer→`USER`, engineer→`ANALYST`, admin→`ADMIN`,
@@ -259,12 +286,26 @@ The pack itself returns only data, but it is written to **pass `PackValidator`**
 
 ## Acceptance criteria
 
+> **Phase-1 scope vs Phase 2.** Phase 1 ships the pack as a complete, validated SPI implementation
+> and proves it **assembles into a working offline `AgentService`** that answers in
+> **`AnswerKind.TEXT`**. The Phase-1 runtime is the `ReActOrchestrator` (T-111, Flow B): it returns
+> TEXT only and does **not** consume the `NavigationCatalog`/`PromptProfile` or a retriever. So
+> **RAG-in-runtime citations** (the cited half of AC2) and **`NavigationIntent` emission** (AC3) are
+> **Phase 2**. In Phase 1 the pack proves the navigation contract at the **pack level** only — a
+> populated, well-formed `NavigationCatalog` (AC5) — and ships an **all-`TEXT`** golden set.
+
 1. **AC1** `new PlatformBuilder().pack(new ReferenceApplicationPack()).start()` returns an
    `AgentPlatform` whose `pack().appId()` equals `AppId("acme-lakehouse")` — **no network**.
-2. **AC2** The assembled `AgentService` answers a golden QA question offline (stub `LlmGateway`):
-   `kind` non-null, with a `Citation` from the ingested Acme corpus.
-3. **AC3** A "show me revenue" style ask returns `AnswerKind.NAVIGATION` with
+2. **AC2 [P1]** The assembled `AgentService` answers a golden QA question offline (stub
+   `LlmGateway`): `kind` is `AnswerKind.TEXT` and the answer text contains the expected fact.
+   **[P2]** Returning that answer *with a `Citation`* from the ingested Acme corpus is deferred to
+   Phase 2 (RAG-in-runtime); the Phase-1 `ReActOrchestrator` emits no citations.
+3. **AC3 [P2 — deferred]** A "show me revenue" style ask returns `AnswerKind.NAVIGATION` with
    `NavigationIntent(targetPageId="kpi-dashboard", parameters⊇{metric=revenue}, rationale!=null)`.
+   Not achievable in Phase 1: the `ReActOrchestrator` (T-111, Flow B) returns TEXT only and does not
+   consume the `NavigationCatalog`/`PromptProfile`. Phase 1 proves the navigation contract at the
+   **pack level** only (catalog populated + `find()` lookup — AC5); the shipped golden set is all
+   `TEXT`.
 4. **AC4** `toolProvider().tools()` are all read-only (`spec().mutating()==false`) and each carries
    a non-null `requiredRole` + `Capability`; `mcpServers()` is empty.
 5. **AC5** `navigationCatalog().find("pipeline-detail")` is present with a required `pipelineId`
@@ -289,8 +330,9 @@ All tests run **offline, no live LLM** — the platform is assembled with a `Stu
 - **Assembly** — `ReferencePlatformBootstrapTest`: `PlatformBuilder.pack(...).start()` →
   `AgentService` (AC1/AC2), asserts `AppId` on emitted `AuditEvent`s; `AgentPlatform.close()`
   releases adapters.
-- **Eval** — `AcmeGoldenCases` (an `EvalSuite`, [eval-harness.md](eval-harness.md)): a small golden
-  set incl. the navigation case (AC3) and a cited QA case (AC2), run under OFFLINE.
+- **Eval** — `AcmeGoldenCases` (an `EvalSuite`, [eval-harness.md](eval-harness.md)): a small
+  **all-`TEXT`** golden set run under OFFLINE (Phase 1). The navigation case (AC3) and a cited QA
+  case (AC2) are **deferred to Phase 2** — see the Phase-1 scope note above.
 - **ArchUnit** — `ReferencePackDependencyRulesTest` (AC8).
 - **Verify:** `mvn -q -pl eoiagent-app-reference test` (default profile, no network).
 

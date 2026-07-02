@@ -1,3 +1,10 @@
+---
+type: roadmap
+title: "Roadmap"
+description: "Phased build plan."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["roadmap"]
+---
 # Roadmap
 
 > Phased build plan. Each phase has a **goal**, **scope**, **exit criteria**, and a

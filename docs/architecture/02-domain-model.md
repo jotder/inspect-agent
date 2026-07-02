@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "02 — Domain Model & Maven Coordinates"
+description: "The canonical vocabulary."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["domain-model"]
+---
 # 02 — Domain Model & Maven Coordinates
 
 > The canonical vocabulary. Every spec, ADR, and ticket uses **these exact type names, package

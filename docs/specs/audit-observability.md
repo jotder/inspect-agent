@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Audit & Observability — Spec"
+description: "Append-only audit trail of every consequential agent action, plus optional tracing."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["audit-observability"]
+---
 # Audit & Observability — Spec
 
 > Append-only audit trail of every consequential agent action, plus optional tracing. Component 9

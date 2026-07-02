@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Agent Runtime / Orchestration — Spec"
+description: "Drives a run (plan → act → observe → reflect) for the EOI Agent."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["orchestration-runtime"]
+---
 # Agent Runtime / Orchestration — Spec
 
 > Drives a run (plan → act → observe → reflect) for the EOI Agent. Component 4 in [01-component-model.md](../architecture/01-component-model.md). Port(s): `Planner`, `Orchestrator`, `TaskManager` (this module), plus `CheckpointStore` from Component 8 (Persistence) consumed here for checkpoint/replay.

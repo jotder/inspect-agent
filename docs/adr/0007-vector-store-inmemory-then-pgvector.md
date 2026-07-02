@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0007: InMemoryEmbeddingStore for embedded/offline; pgvector for production"
+description: "Architecture decision: InMemoryEmbeddingStore for embedded/offline; pgvector for production."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["vector-store-inmemory-then-pgvector"]
+---
 # ADR-0007: InMemoryEmbeddingStore for embedded/offline; pgvector for production
 
 - **Status:** Accepted

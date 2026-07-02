@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0003: Adopt LangChain4j 1.16.3 as the base AI library, pinned via BOM"
+description: "Architecture decision: Adopt LangChain4j 1.16.3 as the base AI library, pinned via BOM."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["foundation-langchain4j-bom"]
+---
 # ADR-0003: Adopt LangChain4j 1.16.3 as the base AI library, pinned via BOM
 
 - **Status:** Accepted

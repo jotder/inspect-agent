@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Tool Registry — Spec"
+description: "Expose the host's Java API as agent tools and call external tools via MCP, with role/profile visibility filtering and approval+audit-enforced dispatch."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["tool-registry"]
+---
 # Tool Registry — Spec
 
 > Expose the host's Java API as agent tools and call external tools via MCP, with role/profile

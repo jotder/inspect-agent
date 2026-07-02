@@ -1,3 +1,10 @@
+---
+type: spec
+title: "RAG / Knowledge — Spec"
+description: "Ingest and retrieve over the static corpus (product docs, pipeline/job config files, schema/data-model configs) with offline in-process embeddings."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["rag-knowledge"]
+---
 # RAG / Knowledge — Spec
 
 > Ingest and retrieve over the static corpus (product docs, pipeline/job config files,

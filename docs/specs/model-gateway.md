@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Model Gateway — Spec"
+description: "Unified chat + embedding model access with local/hosted routing and per-profile fallback."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["model-gateway"]
+---
 # Model Gateway — Spec
 
 > Unified chat + embedding model access with local/hosted routing and per-profile fallback.

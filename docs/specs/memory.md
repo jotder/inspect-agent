@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Memory — Spec"
+description: "Short-term windowed/summarized conversation memory + persistence + (Phase 3) long-term cross-session memory."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["memory"]
+---
 # Memory — Spec
 
 > Short-term windowed/summarized conversation memory + persistence + (Phase 3) long-term cross-session memory. Component 5 in [01-component-model.md](../architecture/01-component-model.md). Port(s): `MemoryStore`, `LongTermMemory` (plus reuse of LangChain4j's `ChatMemory`).

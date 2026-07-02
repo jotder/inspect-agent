@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0008: All mutating actions require an ApprovalGate + dry-run, enforced in the runtime"
+description: "Architecture decision: All mutating actions require an ApprovalGate + dry-run, enforced in the runtime."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["mutating-actions-approval-gate-dryrun"]
+---
 # ADR-0008: All mutating actions require an ApprovalGate + dry-run, enforced in the runtime
 
 - **Status:** Accepted

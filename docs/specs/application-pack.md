@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Application Pack SPI & Platform Bootstrap — Spec"
+description: "The project-specific contract (`eoiagent-app-api`, `com.eoiagent.app`) a product implements to instantiate the agent for its domain, plus the core assembly module (`eoiagent-platform`)."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["application-pack"]
+---
 # Application Pack SPI & Platform Bootstrap — Spec
 
 > The project-specific contract (`eoiagent-app-api`, `com.eoiagent.app`) a product implements to
@@ -135,7 +142,9 @@ Implements **Flow 0 — Platform bootstrap** ([04-sequence-flows.md](../architec
 ## Acceptance criteria
 
 - **AC1** `PlatformBuilder.pack(refPack).start()` returns an `AgentPlatform` whose
-  `agentService()` answers a Flow-A question end-to-end (offline, stub `LlmGateway`).
+  `agentService()` answers a question end-to-end (offline, stub `LlmGateway`). In Phase 1 the answer
+  is `AnswerKind.TEXT` via the `ReActOrchestrator` (Flow B); the cited / `NavigationIntent` Flow-A
+  answer is **Phase 2** (see [reference-app-pack.md §Acceptance criteria](reference-app-pack.md#acceptance-criteria)).
 - **AC2** `AppId` from the pack appears in every emitted `AuditEvent` and in `AgentContext`.
 - **AC3** A pack with `OFFLINE` + `allowHostedFallback()==true` fails `start()` with
   `PolicyViolation` (no platform built).

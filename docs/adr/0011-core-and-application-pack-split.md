@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0011: Split the platform into a reusable Core and a project-specific Application Pack"
+description: "Architecture decision: Split the platform into a reusable Core and a project-specific Application Pack."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["core-and-application-pack-split"]
+---
 # ADR-0011: Split the platform into a reusable Core and a project-specific Application Pack
 
 - **Status:** Accepted

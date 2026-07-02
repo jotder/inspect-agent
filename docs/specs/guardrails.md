@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Guardrails — Spec"
+description: "Input and output safety checks wrapping every model interaction."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["guardrails"]
+---
 # Guardrails — Spec
 
 > Input and output safety checks wrapping every model interaction. Component 7 (part) in

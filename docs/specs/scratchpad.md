@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Scratchpad / Virtual FS — Spec"
+description: "Context offloading so the LLM context window doesn't blow up: large intermediate results are stored by handle and re-read on demand."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["scratchpad"]
+---
 # Scratchpad / Virtual FS — Spec
 
 > Context offloading so the LLM context window doesn't blow up: large intermediate results are stored by handle and re-read on demand. Component 6 in [01-component-model.md](../architecture/01-component-model.md). Port(s): `Scratchpad`.

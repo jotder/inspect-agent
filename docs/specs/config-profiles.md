@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Config / Deployment Profiles — Spec"
+description: "Resolve typed configuration and enforce the per-profile capability matrix so a disabled feature is unreachable, not merely hidden."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["config-profiles"]
+---
 # Config / Deployment Profiles — Spec
 
 > Resolve typed configuration and enforce the per-profile capability matrix so a disabled feature

@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "01 — Component Model (Ports & Adapters)"
+description: "Canonical list of the 11 components, their port interfaces, and the adapters that implement them."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["component-model"]
+---
 # 01 — Component Model (Ports & Adapters)
 
 > Canonical list of the **11 components**, their **port interfaces**, and the **adapters** that

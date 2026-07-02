@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Eval Harness — Spec"
+description: "The \"definition of done\" measurement engine: golden cases, assertions, and a regression suite that runs offline and online in CI."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["eval-harness"]
+---
 # Eval Harness — Spec
 
 > The "definition of done" measurement engine: golden cases, assertions, and a regression suite

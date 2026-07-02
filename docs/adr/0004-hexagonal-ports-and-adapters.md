@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0004: Organize the platform as Hexagonal Ports & Adapters"
+description: "Architecture decision: Organize the platform as Hexagonal Ports & Adapters."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["hexagonal-ports-and-adapters"]
+---
 # ADR-0004: Organize the platform as Hexagonal Ports & Adapters
 
 - **Status:** Accepted

@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0010: Quarantine experimental/single-maintainer dependencies behind ports + feature flags"
+description: "Architecture decision: Quarantine experimental/single-maintainer dependencies behind ports + feature flags."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["isolate-experimental-deps"]
+---
 # ADR-0010: Quarantine experimental/single-maintainer dependencies behind ports + feature flags
 
 - **Status:** Accepted

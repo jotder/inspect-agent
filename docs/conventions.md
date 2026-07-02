@@ -1,3 +1,10 @@
+---
+type: conventions
+title: "Conventions"
+description: "Binding rules for everyone writing code in this repo — especially AI coding agents."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["conventions"]
+---
 # Conventions
 
 > Binding rules for everyone writing code in this repo — **especially AI coding agents**. These

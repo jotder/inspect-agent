@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0002: Target JDK 25 + Maven; standardize on the JDK HttpClient transport"
+description: "Architecture decision: Target JDK 25 + Maven; standardize on the JDK HttpClient transport."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["jdk25-maven-httpclient"]
+---
 # ADR-0002: Target JDK 25 + Maven; standardize on the JDK HttpClient transport
 
 - **Status:** Accepted

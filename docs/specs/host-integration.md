@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Host Integration — Spec"
+description: "The \"embedded under every page\" product surface: the host opens a session, asks page-aware questions, and gets back a typed `AgentAnswer` (often a `NavigationIntent`)."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["host-integration"]
+---
 # Host Integration — Spec
 
 > The "embedded under every page" product surface: the host opens a session, asks page-aware questions, and gets back a typed `AgentAnswer` — most often a `NavigationIntent` routing the user to the right KPI/report page. Component 10 in [01-component-model.md](../architecture/01-component-model.md). Port(s): `AgentService`, `AgentSession`.

@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "04 — Sequence Flows"
+description: "The runtime behaviors as step-by-step flows."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["sequence-flows"]
+---
 # 04 — Sequence Flows
 
 > The runtime behaviors as step-by-step flows. These are the reference an agent implements the

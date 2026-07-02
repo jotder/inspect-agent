@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "00 — Architecture Overview"
+description: "Entry-point architecture overview of the EOI Agent platform; read this first, before the component and domain models."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["overview"]
+---
 # 00 — Architecture Overview
 
 > **Audience:** humans and AI coding agents. Read this first, then

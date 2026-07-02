@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0009: Persisted, append-only audit trail of every agent decision/tool-call/action; pluggable tracing"
+description: "Architecture decision: Persisted, append-only audit trail of every agent decision/tool-call/action; pluggable tracing."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["audit-trail-and-observability"]
+---
 # ADR-0009: Persisted, append-only audit trail of every agent decision/tool-call/action; pluggable tracing
 
 - **Status:** Accepted

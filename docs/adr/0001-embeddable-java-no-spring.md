@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0001: Embeddable plain-Java library, no Spring/Quarkus"
+description: "Architecture decision: Embeddable plain-Java library, no Spring/Quarkus."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["embeddable-java-no-spring"]
+---
 # ADR-0001: Embeddable plain-Java library, no Spring/Quarkus
 
 - **Status:** Accepted

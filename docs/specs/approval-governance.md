@@ -1,3 +1,10 @@
+---
+type: spec
+title: "Approval & Governance — Spec"
+description: "Human-in-the-loop gating + RBAC for the agent."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["approval-governance"]
+---
 # Approval & Governance — Spec
 
 > Human-in-the-loop gating + RBAC for the agent. Component 7 (part) in

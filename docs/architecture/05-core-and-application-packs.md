@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "05 — Core & Application Packs (reuse across products)"
+description: "How the platform is split into a reusable CORE and a project-specific Application Pack, so one engine serves many products."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["core-and-application-packs"]
+---
 # 05 — Core & Application Packs (reuse across products)
 
 > How the platform is split into a **reusable CORE** and a **project-specific Application Pack**,

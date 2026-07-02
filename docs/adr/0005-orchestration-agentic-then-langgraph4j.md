@@ -1,3 +1,10 @@
+---
+type: adr
+title: "ADR-0005: Hybrid orchestration — langchain4j-agentic for MVP, LangGraph4j for stateful flows, behind one Orchestrator port"
+description: "Architecture decision: Hybrid orchestration — langchain4j-agentic for MVP, LangGraph4j for stateful flows, behind one Orchestrator port."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["orchestration-agentic-then-langgraph4j"]
+---
 # ADR-0005: Hybrid orchestration — langchain4j-agentic for MVP, LangGraph4j for stateful flows, behind one Orchestrator port
 
 - **Status:** Accepted

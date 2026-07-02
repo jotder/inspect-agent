@@ -1,3 +1,10 @@
+---
+type: glossary
+title: "Glossary"
+description: "Shared vocabulary."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["glossary"]
+---
 # Glossary
 
 > Shared vocabulary. Use these terms verbatim in code, comments, specs, and tickets. Domain

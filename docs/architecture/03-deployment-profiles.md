@@ -1,3 +1,10 @@
+---
+type: architecture
+title: "03 — Deployment Profiles & Capability Matrix"
+description: "The platform ships as one library that behaves differently per `DeploymentProfile`."
+timestamp: "2026-06-20T20:33:32+05:30"
+tags: ["deployment-profiles"]
+---
 # 03 — Deployment Profiles & Capability Matrix
 
 > The platform ships as **one library** that behaves differently per **`DeploymentProfile`**.
