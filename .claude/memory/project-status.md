@@ -8,13 +8,15 @@ metadata:
 # Project status (as of 2026-07-03)
 
 **Done (committed, tagged `T-NNN:` in git log):** Phase 0 (T-001…T-010), Phase 1 (T-101…T-116),
-**all of Phase 2** (T-201…T-211), and Phase 3 through **T-304** (LangGraphOrchestrator T-301,
-CheckpointStore InMemory+Postgres T-302, breakpoints/HITL/time-travel T-303, investigation
-tools + playbooks T-304).
+**all of Phase 2** (T-201…T-211), and **ALL of Phase 3** (T-301…T-306: LangGraphOrchestrator,
+CheckpointStore InMemory+Postgres, breakpoints/HITL/time-travel, investigation tools + playbooks,
+VectorLongTermMemory, investigation eval + restart→resume asserted). Full reactor green.
 
 **Remaining:**
-- Phase 3: T-305 (VectorLongTermMemory), T-306 (investigation + resume-after-restart eval)
-- Phase 4: T-401…T-405 (OTel tracing, performance pass, security review + offline network-deny, packaging, eval/CI gates)
+- Phase 4 only: T-401…T-405 (OTel tracing, performance pass, security review + offline
+  network-deny, packaging, eval/CI gates) — plus the [[platform-wiring-gotcha]] design item
+  (wire retriever/NavigationCatalog/gate/supervisor/LangGraph into PlatformBuilder so the
+  signature demo runs through `platform.agentService()`).
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc
 references corrected to JDK Class-File API arch tests (conventions §2 has the note); ADR-0012
