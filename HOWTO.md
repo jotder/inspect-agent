@@ -172,10 +172,18 @@ recent transcript — bounded by `eoiagent.runtime.memory.maxMessages` (default 
 model call. Tool chatter never enters the transcript. Watch it happen:
 [`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java).
 
+**"RAG means the model knows our documents."** It doesn't — nothing is taught to the model. Since
+T-352 the platform ingests the pack's corpus at bootstrap and, for every QA turn, embeds the
+question, vector-searches, and injects only the top-k chunks (`eoiagent.runtime.rag.topK`) into
+that single call. The `RETRIEVAL` is audited and the answer carries `Citation`s tracing it to
+sources. See
+[`RagCitationsDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/RagCitationsDemo.java).
+
 | Capability | Where it lives | Recipe |
 |------------|----------------|--------|
 | Real-model tool calling (T-350) | `Lc4jChatGateway` + `ToolMapping`/`ToolCallMeta` | tool round-trip test: `Lc4jChatGatewayToolCallTest` |
 | Session memory in the loop (T-351) | `ReActOrchestrator` + `PlatformBuilder.memoryStore(...)` | [`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java) |
+| RAG + citations in the loop (T-352) | `PlatformBuilder` knowledge stack + `ReActOrchestrator.builder().retriever(...)` | [`RagCitationsDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/RagCitationsDemo.java) |
 
 ## Optional infrastructure
 

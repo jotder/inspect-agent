@@ -6,13 +6,18 @@ import com.eoiagent.core.AgentContext;
 import com.eoiagent.core.AnswerKind;
 import com.eoiagent.core.AuditEvent;
 import com.eoiagent.core.AuditKind;
+import com.eoiagent.core.Citation;
 import com.eoiagent.core.ConfigException;
 import com.eoiagent.core.Goal;
+import com.eoiagent.core.GoalKind;
+import com.eoiagent.core.RetrievalQuery;
+import com.eoiagent.core.RetrievedChunk;
 import com.eoiagent.core.RunId;
 import com.eoiagent.core.TaskList;
 import com.eoiagent.core.ToolCall;
 import com.eoiagent.core.ToolCallMeta;
 import com.eoiagent.core.ToolResult;
+import com.eoiagent.knowledge.Retriever;
 import com.eoiagent.core.ToolSpec;
 import com.eoiagent.memory.ChatMessageRecord;
 import com.eoiagent.memory.ChatRole;
@@ -36,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 
 /**
  * The default/fallback {@link Orchestrator}: a bounded reason+act loop (Flow B). Each iteration asks
@@ -57,11 +63,13 @@ public final class ReActOrchestrator implements Orchestrator {
     private final AuditSink audit;
     private final ConfigProvider config;
     private final TraceCollector trace;
-    private final MemoryStore memory; // nullable: no session memory (pre-T-351 behavior)
+    private final MemoryStore memory;               // nullable: no session memory (pre-T-351 behavior)
+    private final Retriever retriever;              // nullable: no retrieval in the loop (pre-T-352)
+    private final Function<GoalKind, String> systemPrompts; // nullable: no system prompt
 
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config) {
-        this(gateway, tools, scratchpad, audit, config, NOOP_TRACE, null);
+        this(builder().gateway(gateway).tools(tools).scratchpad(scratchpad).audit(audit).config(config));
     }
 
     // Package has no dependency on eoiagent-observability's concrete NoopTraceCollector (runtime
@@ -81,7 +89,8 @@ public final class ReActOrchestrator implements Orchestrator {
     /** T-401: optional {@link TraceCollector} for span-level tracing alongside the mandatory audit trail. */
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config, TraceCollector trace) {
-        this(gateway, tools, scratchpad, audit, config, trace, null);
+        this(builder().gateway(gateway).tools(tools).scratchpad(scratchpad).audit(audit).config(config)
+                .traceCollector(trace));
     }
 
     /**
@@ -93,13 +102,91 @@ public final class ReActOrchestrator implements Orchestrator {
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config, TraceCollector trace,
                              MemoryStore memory) {
-        this.gateway = Objects.requireNonNull(gateway, "gateway");
-        this.tools = Objects.requireNonNull(tools, "tools");
-        this.scratchpad = Objects.requireNonNull(scratchpad, "scratchpad");
-        this.audit = Objects.requireNonNull(audit, "audit");
-        this.config = Objects.requireNonNull(config, "config");
-        this.trace = Objects.requireNonNull(trace, "trace");
-        this.memory = memory;
+        this(builder().gateway(gateway).tools(tools).scratchpad(scratchpad).audit(audit).config(config)
+                .traceCollector(trace).memoryStore(memory));
+    }
+
+    private ReActOrchestrator(Builder b) {
+        this.gateway = Objects.requireNonNull(b.gateway, "gateway");
+        this.tools = Objects.requireNonNull(b.tools, "tools");
+        this.scratchpad = Objects.requireNonNull(b.scratchpad, "scratchpad");
+        this.audit = Objects.requireNonNull(b.audit, "audit");
+        this.config = Objects.requireNonNull(b.config, "config");
+        this.trace = b.trace == null ? NOOP_TRACE : b.trace;
+        this.memory = b.memory;
+        this.retriever = b.retriever;
+        this.systemPrompts = b.systemPrompts;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Assembles the loop with its optional collaborators (the required five are gateway, tools,
+     * scratchpad, audit, config). T-352 additions: {@link #retriever} makes the loop consult the
+     * knowledge corpus per QA turn (RETRIEVAL audited, citations attached to the answer);
+     * {@link #systemPrompts} injects the pack's domain system prompt by {@link GoalKind}.
+     */
+    public static final class Builder {
+        private LlmGateway gateway;
+        private ToolRegistry tools;
+        private Scratchpad scratchpad;
+        private AuditSink audit;
+        private ConfigProvider config;
+        private TraceCollector trace;
+        private MemoryStore memory;
+        private Retriever retriever;
+        private Function<GoalKind, String> systemPrompts;
+
+        public Builder gateway(LlmGateway gateway) {
+            this.gateway = gateway;
+            return this;
+        }
+
+        public Builder tools(ToolRegistry tools) {
+            this.tools = tools;
+            return this;
+        }
+
+        public Builder scratchpad(Scratchpad scratchpad) {
+            this.scratchpad = scratchpad;
+            return this;
+        }
+
+        public Builder audit(AuditSink audit) {
+            this.audit = audit;
+            return this;
+        }
+
+        public Builder config(ConfigProvider config) {
+            this.config = config;
+            return this;
+        }
+
+        public Builder traceCollector(TraceCollector trace) {
+            this.trace = trace;
+            return this;
+        }
+
+        public Builder memoryStore(MemoryStore memory) {
+            this.memory = memory;
+            return this;
+        }
+
+        public Builder retriever(Retriever retriever) {
+            this.retriever = retriever;
+            return this;
+        }
+
+        public Builder systemPrompts(Function<GoalKind, String> systemPrompts) {
+            this.systemPrompts = systemPrompts;
+            return this;
+        }
+
+        public ReActOrchestrator build() {
+            return new ReActOrchestrator(this);
+        }
     }
 
     @Override
@@ -124,7 +211,26 @@ public final class ReActOrchestrator implements Orchestrator {
         int offloadThreshold = config.get(RuntimeConfigKeys.OFFLOAD_THRESHOLD_BYTES);
         List<ChatMessageRecord> transcript = priorTranscript(ctx);
         ChatMessageRecord userTurn = message(ChatRole.USER, goal.text());
-        List<ChatMessageRecord> history = new ArrayList<>(window(transcript));
+
+        String system = systemPrompts == null ? null : systemPrompts.apply(goal.kind());
+        List<Citation> citations = List.of();
+        if (retriever != null && goal.kind() == GoalKind.QA) {
+            List<RetrievedChunk> chunks = retriever.retrieve(
+                    new RetrievalQuery(goal.text(), config.get(RuntimeConfigKeys.RAG_TOP_K), null));
+            audit.record(event(ctx, run, AuditKind.RETRIEVAL,
+                    "retrieved " + chunks.size() + " chunks for goal",
+                    Map.of("sourceIds", sourceIds(chunks))));
+            if (!chunks.isEmpty()) {
+                system = (system == null || system.isBlank() ? "" : system + "\n\n") + contextBlock(chunks);
+                citations = distinctCitations(chunks);
+            }
+        }
+
+        List<ChatMessageRecord> history = new ArrayList<>();
+        if (system != null && !system.isBlank()) {
+            history.add(message(ChatRole.SYSTEM, system));
+        }
+        history.addAll(window(transcript));
         history.add(userTurn);
         List<ToolSpec> visible = tools.visibleTo(ctx);
 
@@ -145,7 +251,7 @@ public final class ReActOrchestrator implements Orchestrator {
             List<ToolCall> calls = result.toolCalls();
             if (calls == null || calls.isEmpty()) {
                 audit.record(event(ctx, run, AuditKind.DECISION, "final answer"));
-                AgentAnswer answer = new AgentAnswer(AnswerKind.TEXT, result.text(), null, null, List.of(), run);
+                AgentAnswer answer = new AgentAnswer(AnswerKind.TEXT, result.text(), null, null, citations, run);
                 persistTurns(ctx, transcript, userTurn, result.text());
                 return new AgentRun(run, answer, emptyTasks(), List.of(), steps);
             }
@@ -237,8 +343,42 @@ public final class ReActOrchestrator implements Orchestrator {
         return new TaskList(List.<com.eoiagent.core.Task>of()); // ReAct (Flow B) has no planned task list
     }
 
+    /** The retrieved context block appended to the system message — each chunk tagged with its source. */
+    private static String contextBlock(List<RetrievedChunk> chunks) {
+        StringBuilder sb = new StringBuilder(256)
+                .append("Use the following retrieved context to answer. Cite only what it supports.");
+        for (RetrievedChunk chunk : chunks) {
+            Citation c = chunk.citation();
+            sb.append("\n\n[source: ").append(c == null ? "unknown" : c.sourceId()).append("] ")
+                    .append(chunk.text());
+        }
+        return sb.toString();
+    }
+
+    private static List<String> sourceIds(List<RetrievedChunk> chunks) {
+        return chunks.stream()
+                .map(RetrievedChunk::citation)
+                .filter(Objects::nonNull)
+                .map(Citation::sourceId)
+                .distinct()
+                .toList();
+    }
+
+    private static List<Citation> distinctCitations(List<RetrievedChunk> chunks) {
+        return chunks.stream()
+                .map(RetrievedChunk::citation)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+    }
+
     private static AuditEvent event(AgentContext ctx, RunId run, AuditKind kind, String summary) {
+        return event(ctx, run, kind, summary, Map.of());
+    }
+
+    private static AuditEvent event(AgentContext ctx, RunId run, AuditKind kind, String summary,
+                                    Map<String, Object> details) {
         return new AuditEvent(Instant.now(), ctx.app(), run, ctx.session(), ctx.user(),
-                kind, summary, Map.<String, Object>of());
+                kind, summary, details);
     }
 }

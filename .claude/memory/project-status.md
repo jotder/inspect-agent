@@ -48,8 +48,22 @@ gained eoiagent-memory dep). Demo `MultiTurnMemoryDemo` (prints the exact contex
 anti-misconception teaching per [[delivery-style]]); HOWTO "Phase-3.5 integration" section; memory
 spec §1b records as-built vs aspirational §1.
 
+**T-352 DONE (2026-07-03):** RAG in the live loop. `ReActOrchestrator.builder()` added (ctor
+telescoping ended; old ctors delegate) with `retriever`/`systemPrompts(Function<GoalKind,String>)`
+seams (runtime uses only core ports — PromptProfile stays app-api-side as a lambda). QA turns:
+retrieve topK (`eoiagent.runtime.rag.topK`=4) → RETRIEVAL audit `details.sourceIds` (the EXACT
+shape DefaultEvalHarness reconstructs) → SYSTEM msg = persona + "[source: id] chunk" blocks →
+distinct Citations on the answer. Platform builds the knowledge stack at bootstrap
+(ModelProfile.embedding provider switch onnx-all-minilm|ollama, InMemoryVectorStore, enrich docs
+with sourceId=ks.id()/sourceType from SourceKind [CONFIG_FILE→"PIPELINE_CONFIG"]);
+`PlatformBuilder.retriever(...)` override (required for CUSTOM sources). KEY FIX: `DocumentLoader`
+default now falls back to classpath resources — the reference pack's bundled corpus
+(/acme/docs/*.md) was NEVER ingestable before. Golden cases qa-ingestion-cadence/qa-lakehouse-zones
+now assert mustCite acme-docs via real ONNX retrieval, green. NOTE: reference-pack boots now load
+ONNX + ingest (~3s each) — perf pass T-402 should share/cache the embedding model.
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓, T-351 ✓):**
+- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

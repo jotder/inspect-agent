@@ -15,8 +15,18 @@ import com.eoiagent.model.LlmGateway;
 import com.eoiagent.model.OllamaChatAdapter;
 import com.eoiagent.model.OpenAiCompatibleChatAdapter;
 import com.eoiagent.model.RoutingLlmGateway;
+import com.eoiagent.core.GoalKind;
+import com.eoiagent.core.IngestReport;
+import com.eoiagent.core.IngestRequest;
+import com.eoiagent.knowledge.DefaultDocumentIngestor;
+import com.eoiagent.knowledge.DefaultRetriever;
+import com.eoiagent.knowledge.DocumentSource;
+import com.eoiagent.knowledge.InMemoryVectorStore;
+import com.eoiagent.knowledge.OnnxEmbeddingAdapter;
+import com.eoiagent.knowledge.Retriever;
 import com.eoiagent.memory.InMemoryMemoryStore;
 import com.eoiagent.memory.MemoryStore;
+import com.eoiagent.model.OllamaEmbeddingAdapter;
 import com.eoiagent.observability.AuditSink;
 import com.eoiagent.observability.NoopTraceCollector;
 import com.eoiagent.observability.Slf4jAuditSink;
@@ -62,6 +72,7 @@ public final class PlatformBuilder {
     private LlmGateway gatewayOverride;
     private TraceCollector traceOverride;
     private MemoryStore memoryOverride;
+    private Retriever retrieverOverride;
 
     /** The application pack to assemble. Required. */
     public PlatformBuilder pack(ApplicationPack pack) {
@@ -108,6 +119,16 @@ public final class PlatformBuilder {
         return this;
     }
 
+    /**
+     * Optional host override for retrieval (T-352); when set, the platform skips building the
+     * default knowledge stack (embedding model + in-memory vector store + ingestion of the pack's
+     * {@code KnowledgeSource}s) and uses this retriever for the RAG step instead.
+     */
+    public PlatformBuilder retriever(Retriever retriever) {
+        this.retrieverOverride = retriever;
+        return this;
+    }
+
     /** Validate → wire → ready. Throws before building anything if the pack is invalid. */
     public AgentPlatform start() {
         if (pack == null) {
@@ -145,8 +166,24 @@ public final class PlatformBuilder {
 
         MemoryStore memory = memoryOverride != null ? memoryOverride : new InMemoryMemoryStore();
 
-        Orchestrator orchestrator = new ReActOrchestrator(
-                gateway, registry, scratchpad, audit, config, trace, memory);
+        // T-352: RAG in the loop. The pack's corpus is ingested at bootstrap (Flow 0) so the very
+        // first question already retrieves; a pack without knowledge sources gets no retriever.
+        Retriever retriever = retrieverOverride;
+        if (retriever == null && !pack.knowledgeSources().isEmpty()) {
+            retriever = buildRetrieval(pack);
+        }
+
+        Orchestrator orchestrator = ReActOrchestrator.builder()
+                .gateway(gateway)
+                .tools(registry)
+                .scratchpad(scratchpad)
+                .audit(audit)
+                .config(config)
+                .traceCollector(trace)
+                .memoryStore(memory)
+                .retriever(retriever)
+                .systemPrompts(kind -> pack.promptProfile().systemPrompt(kind))
+                .build();
         AgentService service = new DefaultAgentService(
                 pack.metadata().appId(), config, orchestrator, guardrail, audit);
 
@@ -178,6 +215,58 @@ public final class PlatformBuilder {
      * {@link RoutingLlmGateway} so it fails closed offline. Only real local providers are recognised;
      * a {@code StubLlmGateway} reaches the platform through {@link #llmGateway(LlmGateway)} instead.
      */
+    /**
+     * Builds the default knowledge stack: the pack's embedding model, an in-memory vector store,
+     * and one ingestion pass over every {@code KnowledgeSource} (idempotent per source id). Source
+     * documents are enriched with the {@code sourceId}/{@code sourceType} metadata the ingestor
+     * requires — the source id doubles as the citation id the eval harness asserts against.
+     */
+    private static Retriever buildRetrieval(ApplicationPack pack) {
+        dev.langchain4j.model.embedding.EmbeddingModel embedding =
+                buildEmbeddingModel(pack.modelProfile().embedding());
+        InMemoryVectorStore store = new InMemoryVectorStore();
+        DefaultDocumentIngestor ingestor = new DefaultDocumentIngestor(embedding, store);
+
+        for (com.eoiagent.app.KnowledgeSource source : pack.knowledgeSources()) {
+            String sourceType = sourceTypeFor(source);
+            List<DocumentSource> enriched = new ArrayList<>();
+            for (DocumentSource doc : source.resolve()) {
+                Map<String, String> meta = new HashMap<>(doc.metadata() == null ? Map.of() : doc.metadata());
+                meta.putIfAbsent("sourceId", source.id());
+                meta.putIfAbsent("sourceType", sourceType);
+                enriched.add(new DocumentSource(doc.uri(), doc.mediaType(), meta));
+            }
+            IngestReport report = ingestor.ingest(new IngestRequest(enriched, source.options()));
+            if (report.documents() == 0) {
+                throw new ConfigException("knowledge source '" + source.id() + "' ingested no documents: "
+                        + report.warnings());
+            }
+        }
+        return new DefaultRetriever(embedding, store);
+    }
+
+    private static String sourceTypeFor(com.eoiagent.app.KnowledgeSource source) {
+        return switch (source.kind()) {
+            case PRODUCT_DOC -> "PRODUCT_DOC";
+            case CONFIG_FILE -> "PIPELINE_CONFIG";
+            case SCHEMA_CONFIG -> "SCHEMA_CONFIG";
+            case CUSTOM -> throw new ConfigException("CUSTOM knowledge source '" + source.id()
+                    + "' needs a host-provided retriever (PlatformBuilder.retriever(...))");
+        };
+    }
+
+    private static dev.langchain4j.model.embedding.EmbeddingModel buildEmbeddingModel(ModelSelection embedding) {
+        String provider = embedding == null || embedding.provider() == null
+                ? "" : embedding.provider().trim().toLowerCase(Locale.ROOT);
+        return switch (provider) {
+            case "onnx", "onnx-all-minilm" -> new OnnxEmbeddingAdapter();
+            case "ollama" -> new OllamaEmbeddingAdapter(embedding.baseUrl(), embedding.modelId());
+            default -> throw new ConfigException("unsupported embedding provider '"
+                    + (embedding == null ? null : embedding.provider())
+                    + "' — supported: onnx-all-minilm, ollama");
+        };
+    }
+
     private static LlmGateway buildGateway(ModelProfile modelProfile, ConfigProvider config) {
         ModelSelection chat = modelProfile.chat();
         String provider = chat.provider() == null ? "" : chat.provider().trim().toLowerCase(Locale.ROOT);

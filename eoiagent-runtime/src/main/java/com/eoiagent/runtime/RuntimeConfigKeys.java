@@ -27,6 +27,10 @@ public final class RuntimeConfigKeys {
     public static final ConfigKey<Integer> MEMORY_MAX_MESSAGES =
             new ConfigKey<>("eoiagent.runtime.memory.maxMessages", Integer.class, 20);
 
+    /** Top-k chunks retrieved per QA turn when a retriever is wired into the loop (T-352). */
+    public static final ConfigKey<Integer> RAG_TOP_K =
+            new ConfigKey<>("eoiagent.runtime.rag.topK", Integer.class, 4);
+
     /** Hard upper bound on sub-agent delegations the supervisor may make per run (Flow D). */
     public static final ConfigKey<Integer> SUPERVISOR_MAX_WORKERS =
             new ConfigKey<>("eoiagent.runtime.supervisor.maxWorkers", Integer.class, 3);

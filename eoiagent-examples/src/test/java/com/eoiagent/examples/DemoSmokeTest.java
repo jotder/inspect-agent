@@ -83,6 +83,11 @@ class DemoSmokeTest {
     }
 
     @Test
+    void ragCitationsDemoRuns() {
+        assertThatCode(() -> RagCitationsDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
     void runAllDemosRuns() {
         assertThatCode(() -> RunAllDemos.main(new String[0])).doesNotThrowAnyException();
     }

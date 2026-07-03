@@ -122,6 +122,18 @@ and any host-supplied tags (e.g. `pipelineId`, `datasetId`).
 
 Implements [Flow A step 2](../architecture/04-sequence-flows.md#flow-a--page-context-product-help-the-common-case-phase-1).
 
+**Live-path integration as built (T-352):** `PlatformBuilder` assembles the stack at bootstrap when
+the pack declares `KnowledgeSource`s — embedding model from `ModelProfile.embedding()`
+(`onnx-all-minilm` | `ollama`), `InMemoryVectorStore`, one idempotent ingest pass per source
+(documents enriched with `sourceId` = the knowledge-source id and `sourceType` mapped from
+`SourceKind`; classpath-bundled corpora load via the `DocumentLoader` classpath fallback), then a
+`DefaultRetriever` handed to the `ReActOrchestrator`. Every QA turn retrieves top-k
+(`eoiagent.runtime.rag.topK`, default 4), emits a live `RETRIEVAL` audit event
+(`details.sourceIds`), injects the tagged chunks into the SYSTEM message, and attaches the distinct
+`Citation`s to the final `AgentAnswer`. Hosts override with `PlatformBuilder.retriever(...)`
+(required for `CUSTOM` sources; pgvector selection by config is T-354). Demo:
+`eoiagent-examples/RagCitationsDemo`.
+
 **Ingest** (`DefaultDocumentIngestor.ingest`):
 
 1. For each `DocumentSource`, pick the loader by type (`ProductDocLoader` / `ConfigFileLoader` /

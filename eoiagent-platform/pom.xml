@@ -63,6 +63,12 @@
       <groupId>com.eoiagent</groupId>
       <artifactId>eoiagent-memory</artifactId>
     </dependency>
+    <!-- T-352: the knowledge stack (embedding + vector store + ingestor + retriever) is now
+         assembled at bootstrap when the pack declares KnowledgeSources. -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-knowledge</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

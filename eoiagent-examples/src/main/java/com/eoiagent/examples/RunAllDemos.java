@@ -40,6 +40,7 @@ public final class RunAllDemos {
         System.out.println("------------------------------------------------------------");
 
         MultiTurnMemoryDemo.main(args);    // session memory in the live loop (T-351)
+        RagCitationsDemo.main(args);       // RAG + citations in the live loop (T-352)
 
         System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");
