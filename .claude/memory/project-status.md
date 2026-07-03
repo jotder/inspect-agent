@@ -5,15 +5,22 @@ metadata:
   type: project
 ---
 
-# Project status (as of 2026-07-03)
+# Project status (as of 2026-07-03, evening)
 
 **Done (committed, tagged `T-NNN:` in git log):** Phase 0 (T-001…T-010), Phase 1 (T-101…T-116),
 **all of Phase 2** (T-201…T-211), and **ALL of Phase 3** (T-301…T-306: LangGraphOrchestrator,
 CheckpointStore InMemory+Postgres, breakpoints/HITL/time-travel, investigation tools + playbooks,
 VectorLongTermMemory, investigation eval + restart→resume asserted). Full reactor green.
 
+**Phase 4 started: T-401 done (OTel tracing).** `NoopTraceCollector` + quarantined
+`OpenTelemetryTraceCollector` (optional `opentelemetry-api` 1.44.1 via BOM) in
+eoiagent-observability; spans (model_call/tool_call) wired into `ReActOrchestrator` via a new
+6-arg ctor (5-arg ctor unchanged, defaults to a private no-op — runtime depends only on the
+TraceCollector PORT in core, never the observability adapter); `PlatformBuilder.traceCollector(...)`
+override, Noop default. OTel tests run against `OpenTelemetry.noop()` — offline, no SDK.
+
 **Remaining:**
-- Phase 4 only: T-401…T-405 (OTel tracing, performance pass, security review + offline
+- Phase 4: T-402…T-405 (performance pass, security review + offline
   network-deny, packaging, eval/CI gates) — plus the [[platform-wiring-gotcha]] design item
   (wire retriever/NavigationCatalog/gate/supervisor/LangGraph into PlatformBuilder so the
   signature demo runs through `platform.agentService()`).
@@ -31,9 +38,6 @@ hooks needs the user (permission classifier blocks agent self-modification); see
 `-am` for per-module test runs. T-304's canned corpus (orders_daily failure: E-1..E-3, A-101/
 A-102, INC-2001, C-501, playbook `pipeline-failure`) is what the T-306 investigation eval should
 assert against. See [[improvement-backlog]] and [[platform-wiring-gotcha]].
-
-Repo: https://github.com/jotder/inspect-agent (personal `jotder`; commits authored
-rahul@gammanalytics.com — org transfer still an open item).
 
 Repo: https://github.com/jotder/inspect-agent (personal `jotder`; commits authored
 rahul@gammanalytics.com — org transfer still an open item).
