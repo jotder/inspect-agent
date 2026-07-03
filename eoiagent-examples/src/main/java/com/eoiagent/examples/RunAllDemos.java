@@ -35,6 +35,13 @@ public final class RunAllDemos {
         Phase2EvalDemo.main(args);         // eval harness over a Phase-2 golden set (T-211)
 
         System.out.println();
+        System.out.println("------------------------------------------------------------");
+        System.out.println("  Phase 3.5 integration (the live path, closed)");
+        System.out.println("------------------------------------------------------------");
+
+        MultiTurnMemoryDemo.main(args);    // session memory in the live loop (T-351)
+
+        System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");
     }
 }

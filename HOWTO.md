@@ -152,6 +152,31 @@ Mutating actions are gated on the `MUTATING_ACTIONS` feature and are **not permi
 `OFFLINE` profile** — they run under `ON_PREM_HOSTED` / `CLOUD`. No mutation ever executes without a
 preceding recorded `APPROVED` decision.
 
+## Phase-3.5 integration: the live path, closed
+
+Phase 3.5 wires the tested components into the *assembled* platform, so they work through
+`platform.agentService()` — not just in unit tests. Two common misconceptions these features
+correct:
+
+**"The model executes tools."** It does not — the model only *asks* for a tool call; the
+platform's audited `ToolRegistry` executes it and feeds the result back. Since T-350 this works
+with **real models** (Ollama / OpenAI-compatible): tool schemas are sent with each request, the
+model's tool calls come back typed, and results are replayed paired with the provider's call id.
+Any model served via Ollama or an OpenAI-compatible endpoint can drive tools — no per-model code
+(see [ADR-0013](docs/adr/0013-pluggable-models.md)).
+
+**"The model remembers my last question."** Models are stateless. Since T-351 the platform stores
+each USER/ASSISTANT turn in a `MemoryStore` (in-memory by default; inject
+`PlatformBuilder.memoryStore(new PostgresMemoryStore(ds))` to survive restarts) and replays the
+recent transcript — bounded by `eoiagent.runtime.memory.maxMessages` (default 20) — into every
+model call. Tool chatter never enters the transcript. Watch it happen:
+[`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java).
+
+| Capability | Where it lives | Recipe |
+|------------|----------------|--------|
+| Real-model tool calling (T-350) | `Lc4jChatGateway` + `ToolMapping`/`ToolCallMeta` | tool round-trip test: `Lc4jChatGatewayToolCallTest` |
+| Session memory in the loop (T-351) | `ReActOrchestrator` + `PlatformBuilder.memoryStore(...)` | [`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java) |
+
 ## Optional infrastructure
 
 ### A real local LLM (Ollama)

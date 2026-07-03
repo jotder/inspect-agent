@@ -15,6 +15,8 @@ import com.eoiagent.model.LlmGateway;
 import com.eoiagent.model.OllamaChatAdapter;
 import com.eoiagent.model.OpenAiCompatibleChatAdapter;
 import com.eoiagent.model.RoutingLlmGateway;
+import com.eoiagent.memory.InMemoryMemoryStore;
+import com.eoiagent.memory.MemoryStore;
 import com.eoiagent.observability.AuditSink;
 import com.eoiagent.observability.NoopTraceCollector;
 import com.eoiagent.observability.Slf4jAuditSink;
@@ -59,6 +61,7 @@ public final class PlatformBuilder {
     private AuditSink auditOverride;
     private LlmGateway gatewayOverride;
     private TraceCollector traceOverride;
+    private MemoryStore memoryOverride;
 
     /** The application pack to assemble. Required. */
     public PlatformBuilder pack(ApplicationPack pack) {
@@ -91,6 +94,17 @@ public final class PlatformBuilder {
      */
     public PlatformBuilder traceCollector(TraceCollector traceCollector) {
         this.traceOverride = traceCollector;
+        return this;
+    }
+
+    /**
+     * Optional host override for session memory (T-351); when set, replaces the default
+     * {@link InMemoryMemoryStore} (e.g. with a {@code PostgresMemoryStore} so conversations
+     * survive restarts). Session transcripts seed each run's model context — memory is explicit
+     * platform behavior, not something the model "just has".
+     */
+    public PlatformBuilder memoryStore(MemoryStore memoryStore) {
+        this.memoryOverride = memoryStore;
         return this;
     }
 
@@ -129,7 +143,10 @@ public final class PlatformBuilder {
 
         Guardrail guardrail = new Lc4jInputGuardrail();
 
-        Orchestrator orchestrator = new ReActOrchestrator(gateway, registry, scratchpad, audit, config, trace);
+        MemoryStore memory = memoryOverride != null ? memoryOverride : new InMemoryMemoryStore();
+
+        Orchestrator orchestrator = new ReActOrchestrator(
+                gateway, registry, scratchpad, audit, config, trace, memory);
         AgentService service = new DefaultAgentService(
                 pack.metadata().appId(), config, orchestrator, guardrail, audit);
 

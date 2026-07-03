@@ -39,8 +39,17 @@ turn and preserves callId when scoping. Malformed model-emitted arg JSON degrade
 REQUIRE the tool result to echo the request's call id — legacy meta-less TOOL records still map to
 UserMessage (fallback).
 
+**T-351 DONE (2026-07-03):** session memory in the live loop. `ReActOrchestrator` 7-arg ctor takes
+nullable `MemoryStore` (port); seeds history from stored transcript (window = new
+`eoiagent.runtime.memory.maxMessages` key, default 20; store keeps everything), persists USER+final
+ASSISTANT turn on success (also on max-steps CLARIFICATION), nothing on ERROR; tool turns NEVER
+persisted. `PlatformBuilder.memoryStore(...)` override, `InMemoryMemoryStore` default (platform pom
+gained eoiagent-memory dep). Demo `MultiTurnMemoryDemo` (prints the exact context the model sees —
+anti-misconception teaching per [[delivery-style]]); HOWTO "Phase-3.5 integration" section; memory
+spec §1b records as-built vs aspirational §1.
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓):** T-351 memory-in-loop,
+- **Phase 3.5 Integration (T-350 ✓, T-351 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

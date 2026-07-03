@@ -94,6 +94,20 @@ record MemoryFact(SessionId scope, String text, Instant at, Map<String,String> m
 2. The `ChatMemory` is backed by the configured `MemoryStore` via the LC4j `ChatMemoryStore` bridge: on construction it loads via `MemoryStore.get(id)`; after each turn it flushes via `MemoryStore.put(id, currentMessages)` (snapshot, last-write-wins).
 3. The orchestrator reads `ChatMemory.messages()` to seed run history (Flow B step 1) and appends new user/assistant/tool messages as the run proceeds.
 
+### 1b. Live-path integration as built (T-351)
+
+The assembled platform closes the loop more directly than §1's sketch: `PlatformBuilder` wires a
+`MemoryStore` (default `InMemoryMemoryStore`; host override via `PlatformBuilder.memoryStore(...)`,
+e.g. `PostgresMemoryStore` to survive restarts) straight into `ReActOrchestrator`. Each run seeds
+its history with the most recent stored turns bounded by `eoiagent.runtime.memory.maxMessages`
+(default 20 — the *sent context* is bounded; the *stored transcript* keeps everything), then
+persists the USER goal + final ASSISTANT answer after a successful run. **Tool-call turns are
+run-scoped working state and are never written to session memory** (they would bloat and poison
+later context). ERROR runs persist nothing. The `ChatMemory` adapters (window/token-window/
+summarizing) remain available to hosts; selecting them by `eoiagent.memory.kind` inside the live
+path is deferred to config-first assembly (backlog T-354). Demo:
+`eoiagent-examples/MultiTurnMemoryDemo`.
+
 ### 2. Windowing & token budgeting
 
 - `WindowChatMemory`: LC4j evicts oldest messages beyond `eoiagent.memory.maxMessages`, always preserving the system message.

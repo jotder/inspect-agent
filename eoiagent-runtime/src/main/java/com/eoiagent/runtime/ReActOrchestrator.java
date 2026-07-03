@@ -16,6 +16,7 @@ import com.eoiagent.core.ToolResult;
 import com.eoiagent.core.ToolSpec;
 import com.eoiagent.memory.ChatMessageRecord;
 import com.eoiagent.memory.ChatRole;
+import com.eoiagent.memory.MemoryStore;
 import com.eoiagent.model.ChatOptions;
 import com.eoiagent.model.ChatRequest;
 import com.eoiagent.model.ChatResult;
@@ -56,10 +57,11 @@ public final class ReActOrchestrator implements Orchestrator {
     private final AuditSink audit;
     private final ConfigProvider config;
     private final TraceCollector trace;
+    private final MemoryStore memory; // nullable: no session memory (pre-T-351 behavior)
 
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config) {
-        this(gateway, tools, scratchpad, audit, config, NOOP_TRACE);
+        this(gateway, tools, scratchpad, audit, config, NOOP_TRACE, null);
     }
 
     // Package has no dependency on eoiagent-observability's concrete NoopTraceCollector (runtime
@@ -79,12 +81,25 @@ public final class ReActOrchestrator implements Orchestrator {
     /** T-401: optional {@link TraceCollector} for span-level tracing alongside the mandatory audit trail. */
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config, TraceCollector trace) {
+        this(gateway, tools, scratchpad, audit, config, trace, null);
+    }
+
+    /**
+     * T-351: optional session {@link MemoryStore}. When present, the run is seeded with the most
+     * recent stored turns (bounded by {@code eoiagent.runtime.memory.maxMessages}) and the USER
+     * goal + final ASSISTANT answer are persisted after a successful run. Tool-call turns stay
+     * run-scoped working state — they are never written to session memory.
+     */
+    public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
+                             AuditSink audit, ConfigProvider config, TraceCollector trace,
+                             MemoryStore memory) {
         this.gateway = Objects.requireNonNull(gateway, "gateway");
         this.tools = Objects.requireNonNull(tools, "tools");
         this.scratchpad = Objects.requireNonNull(scratchpad, "scratchpad");
         this.audit = Objects.requireNonNull(audit, "audit");
         this.config = Objects.requireNonNull(config, "config");
         this.trace = Objects.requireNonNull(trace, "trace");
+        this.memory = memory;
     }
 
     @Override
@@ -107,8 +122,10 @@ public final class ReActOrchestrator implements Orchestrator {
     private AgentRun loop(Goal goal, AgentContext ctx, RunId run) {
         int maxSteps = config.get(RuntimeConfigKeys.MAX_STEPS);
         int offloadThreshold = config.get(RuntimeConfigKeys.OFFLOAD_THRESHOLD_BYTES);
-        List<ChatMessageRecord> history = new ArrayList<>();
-        history.add(message(ChatRole.USER, goal.text()));
+        List<ChatMessageRecord> transcript = priorTranscript(ctx);
+        ChatMessageRecord userTurn = message(ChatRole.USER, goal.text());
+        List<ChatMessageRecord> history = new ArrayList<>(window(transcript));
+        history.add(userTurn);
         List<ToolSpec> visible = tools.visibleTo(ctx);
 
         int steps = 0;
@@ -129,6 +146,7 @@ public final class ReActOrchestrator implements Orchestrator {
             if (calls == null || calls.isEmpty()) {
                 audit.record(event(ctx, run, AuditKind.DECISION, "final answer"));
                 AgentAnswer answer = new AgentAnswer(AnswerKind.TEXT, result.text(), null, null, List.of(), run);
+                persistTurns(ctx, transcript, userTurn, result.text());
                 return new AgentRun(run, answer, emptyTasks(), List.of(), steps);
             }
 
@@ -158,7 +176,42 @@ public final class ReActOrchestrator implements Orchestrator {
         AgentAnswer answer = new AgentAnswer(AnswerKind.CLARIFICATION,
                 "I couldn't complete this within " + maxSteps + " steps. Could you narrow the request?",
                 null, null, List.of(), run);
+        persistTurns(ctx, transcript, userTurn, answer.text());
         return new AgentRun(run, answer, emptyTasks(), List.of(), steps);
+    }
+
+    /** Stored transcript for this session, or empty when no memory is wired. */
+    private List<ChatMessageRecord> priorTranscript(AgentContext ctx) {
+        if (memory == null) {
+            return List.of();
+        }
+        List<ChatMessageRecord> stored = memory.get(ctx.session());
+        return stored == null ? List.of() : stored;
+    }
+
+    /** The most recent turns that fit the configured context window (the store keeps everything). */
+    private List<ChatMessageRecord> window(List<ChatMessageRecord> transcript) {
+        int max = config.get(RuntimeConfigKeys.MEMORY_MAX_MESSAGES);
+        if (max <= 0 || transcript.size() <= max) {
+            return transcript;
+        }
+        return transcript.subList(transcript.size() - max, transcript.size());
+    }
+
+    /**
+     * Appends this run's USER goal and ASSISTANT answer to the session transcript. Only durable
+     * conversation turns are stored — tool-call turns are working state and would bloat/poison
+     * later context. ERROR runs never reach here (nothing worth replaying).
+     */
+    private void persistTurns(AgentContext ctx, List<ChatMessageRecord> transcript,
+                              ChatMessageRecord userTurn, String answerText) {
+        if (memory == null) {
+            return;
+        }
+        List<ChatMessageRecord> updated = new ArrayList<>(transcript);
+        updated.add(userTurn);
+        updated.add(message(ChatRole.ASSISTANT, answerText));
+        memory.put(ctx.session(), updated);
     }
 
     /** Inlines a small tool result, or offloads a large one to the scratchpad and returns a synopsis. */

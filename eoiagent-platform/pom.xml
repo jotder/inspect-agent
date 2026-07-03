@@ -58,6 +58,11 @@
       <groupId>com.eoiagent</groupId>
       <artifactId>eoiagent-host</artifactId>
     </dependency>
+    <!-- T-351: session memory is now consumed by the live loop (InMemoryMemoryStore default). -->
+    <dependency>
+      <groupId>com.eoiagent</groupId>
+      <artifactId>eoiagent-memory</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

@@ -13,11 +13,16 @@ import com.eoiagent.core.Role;
 import com.eoiagent.core.ToolCall;
 import com.eoiagent.core.ToolResult;
 import com.eoiagent.core.ToolSpec;
+import com.eoiagent.core.SessionId;
 import com.eoiagent.core.UserId;
 import com.eoiagent.core.UserMessage;
 import com.eoiagent.host.AgentService;
 import com.eoiagent.host.AgentSession;
 import com.eoiagent.host.SessionRequest;
+import com.eoiagent.memory.ChatMessageRecord;
+import com.eoiagent.memory.ChatRole;
+import com.eoiagent.memory.InMemoryMemoryStore;
+import com.eoiagent.memory.MemoryStore;
 import com.eoiagent.model.StubLlmGateway;
 import com.eoiagent.observability.AuditSink;
 import com.eoiagent.tool.Tool;
@@ -138,7 +143,57 @@ class PlatformBuilderTest {
                 .hasMessageContaining("provider");
     }
 
+    @Test
+    void sessionTranscriptPersistsAcrossAsksThroughTheAssembledPlatform() { // T-351
+        RecordingMemoryStore store = new RecordingMemoryStore();
+        StubLlmGateway gateway = StubLlmGateway.builder()
+                .replyText("orders_daily is the nightly revenue pipeline")
+                .replyText("it last failed on 2026-06-20")
+                .build();
+
+        try (AgentPlatform platform = new PlatformBuilder()
+                .pack(new StubApplicationPack())
+                .llmGateway(gateway)
+                .memoryStore(store)
+                .start()) {
+
+            AgentSession session = platform.agentService().open(offlineSession());
+            session.ask(ask("what is orders_daily?"));
+            session.ask(ask("when did IT last fail?"));
+            session.close();
+
+            assertThat(store.lastSession).isNotNull();
+            List<ChatMessageRecord> transcript = store.get(store.lastSession);
+            assertThat(transcript).extracting(ChatMessageRecord::role).containsExactly(
+                    ChatRole.USER, ChatRole.ASSISTANT, ChatRole.USER, ChatRole.ASSISTANT);
+            assertThat(transcript.get(2).text()).isEqualTo("when did IT last fail?");
+            assertThat(transcript.get(3).text()).isEqualTo("it last failed on 2026-06-20");
+        }
+    }
+
     // --- test doubles -----------------------------------------------------------------------------
+
+    /** Delegating store that remembers which session was written, so the test can read it back. */
+    private static final class RecordingMemoryStore implements MemoryStore {
+        private final InMemoryMemoryStore delegate = new InMemoryMemoryStore();
+        volatile SessionId lastSession;
+
+        @Override
+        public void put(SessionId id, List<ChatMessageRecord> messages) {
+            lastSession = id;
+            delegate.put(id, messages);
+        }
+
+        @Override
+        public List<ChatMessageRecord> get(SessionId id) {
+            return delegate.get(id);
+        }
+
+        @Override
+        public void delete(SessionId id) {
+            delegate.delete(id);
+        }
+    }
 
     private static final class RecordingAuditSink implements AuditSink {
         private final List<AuditEvent> events = new CopyOnWriteArrayList<>();

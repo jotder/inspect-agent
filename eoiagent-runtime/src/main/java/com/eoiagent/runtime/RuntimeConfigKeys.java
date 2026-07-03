@@ -20,6 +20,13 @@ public final class RuntimeConfigKeys {
     public static final ConfigKey<Integer> OFFLOAD_THRESHOLD_BYTES =
             new ConfigKey<>("eoiagent.runtime.offloadThresholdBytes", Integer.class, 8192);
 
+    /**
+     * Most recent conversation turns replayed to the model from session memory (T-351). The
+     * stored transcript keeps everything; this bounds only the context sent per call.
+     */
+    public static final ConfigKey<Integer> MEMORY_MAX_MESSAGES =
+            new ConfigKey<>("eoiagent.runtime.memory.maxMessages", Integer.class, 20);
+
     /** Hard upper bound on sub-agent delegations the supervisor may make per run (Flow D). */
     public static final ConfigKey<Integer> SUPERVISOR_MAX_WORKERS =
             new ConfigKey<>("eoiagent.runtime.supervisor.maxWorkers", Integer.class, 3);
