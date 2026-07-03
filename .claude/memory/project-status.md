@@ -99,8 +99,20 @@ chunk (degraded, never failed); mid-stream onError → future exceptional → ru
 REMOVED from host). ScriptedGateway test double got token-split chatStream. Demo
 `StreamingAnswerDemo` (time-to-first-token teaching).
 
+**T-356 DONE (2026-07-03) — PHASE 3.5 COMPLETE.** Model certification gate (ADR-0013 §3):
+`ModelCertificationRunner` (eoiagent-examples main) — suite = 3 capability gates (cert-rag-grounding
+CONTAINS "02:00" + mustCite acme-docs; cert-tool-call-fidelity getPipelineStatus{pipelineId:
+nightly-load} + CONTAINS SUCCEEDED; cert-navigation → NAVIGATION kpi-dashboard{metric:revenue});
+`certify(provider,baseUrl,modelId)` boots the reference pack with config-first overrides (exercises
+ADR-0013 §1 live) + audit-aware harness; main() prints per-gate PASS/FAIL + CERTIFIED/REJECTED
+(graceful return when endpoint unreachable; sysprops outrank env so tests can target a dead port).
+`LiveModelCertificationTest` env-gated on `EOIAGENT_IT_LLM_BASE_URL` (+_PROVIDER/_MODEL) — skipped
+in offline CI, the T-405 nightly job should run it. NOT in RunAllDemos (needs live endpoint).
+**A live certification has NOT yet been executed on this machine (no Ollama installed)** — first
+real run pending; candidates: qwen2.5:14b-instruct (default), ornith-1.0-9b.
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓, T-354 ✓, T-355 ✓):**
+- **Phase 3.5 Integration COMPLETE (T-350…T-356 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

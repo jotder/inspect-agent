@@ -189,6 +189,26 @@ sources. See
 | Mutating approval via platform (T-354) | `PlatformBuilder.approvalHandler(...)` + `MUTATING_ACTIONS`; headless = fail-closed DENIED | `PlatformWiringV2Test` (C4 asserted end-to-end) |
 | Policy ceiling (T-354) | pack `PolicyProfile` = restriction overlay on `RoleBasedPolicyEngine` — packs narrow, never widen | `PlatformWiringV2Test` |
 | Real token streaming (T-355) | `askStream` → `Orchestrator.run(goal, ctx, onToken)` → `LlmGateway.chatStream` | [`StreamingAnswerDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/StreamingAnswerDemo.java) |
+| Model certification (T-356) | [`ModelCertificationRunner`](eoiagent-examples/src/main/java/com/eoiagent/examples/ModelCertificationRunner.java) + env-gated `LiveModelCertificationTest` | see below |
+
+### Certifying a model (ADR-0013 §3)
+
+Adopting a newer model is a measurement, not a project. With any local endpoint running
+(Ollama or OpenAI-compatible):
+
+```
+# certify the default (qwen2.5:14b-instruct on localhost:11434)
+mvn -q -pl eoiagent-examples exec:java -Dexec.mainClass=com.eoiagent.examples.ModelCertificationRunner
+
+# certify a candidate, e.g. Ornith 1.0 9B
+EOIAGENT_CERT_MODEL=ornith-1.0-9b mvn -q -pl eoiagent-examples exec:java \
+  -Dexec.mainClass=com.eoiagent.examples.ModelCertificationRunner
+```
+
+The suite scores the capabilities the platform depends on — RAG-grounded answering, tool-call
+fidelity (correct tool, correct args), and typed navigation — and prints a per-gate PASS/FAIL plus
+a CERTIFIED/REJECTED verdict. The same suite runs as an env-gated test
+(`EOIAGENT_IT_LLM_BASE_URL=... mvn -pl eoiagent-examples test`) for CI with a live model runner.
 
 **"The agent operates the UI."** It never does — navigation answers are *typed intents*
 (`AgentAnswer(NAVIGATION, NavigationIntent)`) the model proposes via the reserved
