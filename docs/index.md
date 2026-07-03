@@ -27,6 +27,9 @@ Curated context for AI agents, in [Open Knowledge Format](https://github.com/Goo
 * [ADR-0009: Persisted, append-only audit trail of every agent decision/tool-call/action; pluggable tracing](adr/0009-audit-trail-and-observability.md) - Architecture decision: Persisted, append-only audit trail of every agent decision/tool-call/action; pluggable tracing.
 * [ADR-0010: Quarantine experimental/single-maintainer dependencies behind ports + feature flags](adr/0010-isolate-experimental-deps.md) - Architecture decision: Quarantine experimental/single-maintainer dependencies behind ports + feature flags.
 * [ADR-0011: Split the platform into a reusable Core and a project-specific Application Pack](adr/0011-core-and-application-pack-split.md) - Architecture decision: Split the platform into a reusable Core and a project-specific Application Pack.
+* [ADR-0012: Permissive-only dependency licensing (Apache-2.0 / MIT / BSD)](adr/0012-permissive-licensing-policy.md) - Architecture decision: all runtime dependencies must carry permissive licenses; model weights are chosen per client deployment.
+* [ADR-0013: Models are pluggable deployment config, certified by eval](adr/0013-pluggable-models.md) - Architecture decision: model choice is swappable per deployment without recompiling; new models are adopted by passing the certification eval.
+* [ADR-0014: v1 ships classpath jars + Automatic-Module-Name; no JPMS module-info](adr/0014-packaging-classpath-not-jpms.md) - Architecture decision: the deliberate split-package design is incompatible with JPMS; v1 packaging is plain jars via the BOM.
 
 ## Component & Capability Specs
 

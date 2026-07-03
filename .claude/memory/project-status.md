@@ -19,11 +19,22 @@ eoiagent-observability; spans (model_call/tool_call) wired into `ReActOrchestrat
 TraceCollector PORT in core, never the observability adapter); `PlatformBuilder.traceCollector(...)`
 override, Noop default. OTel tests run against `OpenTelemetry.noop()` — offline, no SDK.
 
-**Remaining:**
-- Phase 4: T-402…T-405 (performance pass, security review + offline
-  network-deny, packaging, eval/CI gates) — plus the [[platform-wiring-gotcha]] design item
-  (wire retriever/NavigationCatalog/gate/supervisor/LangGraph into PlatformBuilder so the
-  signature demo runs through `platform.agentService()`).
+**HANDOVER AUDIT (2026-07-03, new sole owner):** phases 0–3 are component-complete but the LIVE
+path was never closed. Verified gaps: **F1** `Lc4jChatGateway.toolCalls()` always empty — no real
+model can drive a tool (whole agentic stack only ever ran on StubLlmGateway); **F2** sessions
+stateless (no ChatMemory consumed in host/platform); **F3** no Retriever in the loop (no live
+RETRIEVAL/citations); **F4** NavigationIntent never emitted by any orchestrator; **F5** Phase 4
+as written collided with reality (JPMS vs split packages; SecurityManager removed in JDK 25; no
+CI exists). Owner directives: model choice must be pluggable as models progress (→ ADR-0013);
+otherwise architect's discretion. New ADRs: **0013** (pluggable models, config-first + eval
+certification), **0014** (classpath jars + Automatic-Module-Name, NO JPMS).
+
+**Remaining (restructured backlog):**
+- **Phase 3.5 Integration (NEW, do first):** T-350 tool-call mapping, T-351 memory-in-loop,
+  T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
+  models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
+  model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).
+- Phase 4 (after 3.5): T-402…T-405 as re-scoped in backlog.md.
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc
 references corrected to JDK Class-File API arch tests (conventions §2 has the note); ADR-0012

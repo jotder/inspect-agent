@@ -240,15 +240,36 @@ LLM** (stub `LlmGateway`).
 
 ---
 
+## Phase 3.5 — Integration (close the vertical slice)
+
+> **Added at the 2026-07-03 handover audit.** Phases 0–3 produced fully-tested components, but the
+> live path (`platform.agentService().ask(...)`) never got them: no real model can emit a tool call,
+> sessions carry no memory, retrieval/citations/navigation never reach the loop, and Phase-2/3
+> orchestrators aren't assembled by the platform. These tickets close the gap **before** hardening —
+> hardening a system that has never run for real is polishing the wrong thing. See
+> [ADR-0013](../adr/0013-pluggable-models.md).
+
+| ID | Title | Module | Spec | Depends-on | Key ACs |
+|----|-------|--------|------|-----------|---------|
+| T-350 | Tool-call mapping in `Lc4jChatGateway` | model | [model-gateway](../specs/model-gateway.md) | T-110 | our `ToolSpec`s sent as LC4j `ToolSpecification`s; LC4j `AiMessage.toolExecutionRequests()` → `ChatResult.toolCalls`; TOOL-role history → `ToolExecutionResultMessage`; model-agnostic (no per-model hacks); fake-LC4j-model unit tests |
+| T-351 | Memory in the loop | runtime, platform | [memory](../specs/memory.md) | T-108, T-207 | orchestrator seeds history from session `ChatMemory`; turns persist across `ask()` calls; platform wires window memory by default (summarizing/Postgres by config) |
+| T-352 | RAG in the loop | runtime, platform | [rag-knowledge](../specs/rag-knowledge.md) | T-104, T-208 | retriever consulted per QA turn; retrieved context injected via `PromptProfile`; `RETRIEVAL` audit emitted live; `AgentAnswer.citations` populated; reference-pack citation goldens go green through the platform |
+| T-353 | NavigationIntent emission | runtime | [host-integration](../specs/host-integration.md) | T-352 | assembled service returns `AgentAnswer(NAVIGATION, NavigationIntent)` for page-routing goals using the pack `NavigationCatalog`; reference-pack nav goldens green end-to-end |
+| T-354 | Platform wiring v2 + config-first models | platform | [application-pack](../specs/application-pack.md) | T-203, T-205, T-303 | `eoiagent.model.chat.*` config overrides pack `ModelProfile` (ADR-0013 §1); ApprovalGate + 4-arg mutating registry assembled under `MUTATING_ACTIONS`; orchestrator selection (ReAct/Supervisor/LangGraph) by config/GoalKind; `ProfilePolicyEngine` reconciled as restriction overlay on `RoleBasedPolicyEngine` |
+| T-355 | Real token streaming | model, host | [model-gateway](../specs/model-gateway.md), [host-integration](../specs/host-integration.md) | T-350 | `askStream` streams live gateway tokens through `AnswerSink` (no post-hoc splitting) for the no-tool-call path; graceful fallback otherwise |
+| T-356 | Live-model E2E + model certification run | eval, examples | [eval-harness](../specs/eval-harness.md), [ADR-0013](../adr/0013-pluggable-models.md) | T-350, T-352 | env-gated IT drives the assembled platform against a live local endpoint (Ollama / OpenAI-compatible); golden suite + tool-call fidelity as the repeatable certification gate for candidate models (e.g. qwen2.5, Ornith 1.0) |
+
+---
+
 ## Phase 4 — Hardening
 
 | ID | Title | Module | Spec | Depends-on | Key ACs |
 |----|-------|--------|------|-----------|---------|
 | T-401 | OpenTelemetry tracing | observability | [audit-observability](../specs/audit-observability.md) | T-113 | spans across runtime; `NoopTraceCollector` default |
-| T-402 | Performance pass | (cross) | [eval-harness](../specs/eval-harness.md) | T-115 | latency budgets met for interactive Q&A; embedding/retrieval tuned |
-| T-403 | Security review + offline network-deny test | safety, (cross) | [guardrails](../specs/guardrails.md), [03-deployment-profiles](../architecture/03-deployment-profiles.md) | T-210, T-303 | prompt-injection red-team; **OFFLINE proves zero egress**; audit completeness |
-| T-404 | Packaging | (root) | [conventions](../conventions.md) | T-303 | shaded uber-jar / JPMS `module-info` as host requires |
-| T-405 | Eval hardening + CI gates | eval | [eval-harness](../specs/eval-harness.md) | T-306 | regression baseline; CI gates across all profiles |
+| T-402 | Performance pass | (cross) | [eval-harness](../specs/eval-harness.md) | T-356 | latency budgets met for interactive Q&A **measured on the live-model path**; embedding/retrieval tuned |
+| T-403 | Security review + offline network-deny test | safety, (cross) | [guardrails](../specs/guardrails.md), [03-deployment-profiles](../architecture/03-deployment-profiles.md) | T-210, T-303 | prompt-injection red-team; **OFFLINE proves zero egress** via an in-JVM guard (`ProxySelector`/socket-factory harness — `SecurityManager` is removed in JDK 25) + documented OS-level denial guidance; audit completeness |
+| T-404 | Packaging | (root) | [conventions](../conventions.md), [ADR-0014](../adr/0014-packaging-classpath-not-jpms.md) | T-303 | `Automatic-Module-Name` manifests; optional shaded uber-jar; license report (ADR-0012 §4); **no JPMS `module-info`** (split packages, ADR-0014) |
+| T-405 | Eval hardening + CI gates | eval | [eval-harness](../specs/eval-harness.md) | T-306, T-356 | GitHub Actions workflow (none exists yet): full offline reactor + golden suites as PR gate; live-model certification as manual/nightly job |
 
 ---
 
