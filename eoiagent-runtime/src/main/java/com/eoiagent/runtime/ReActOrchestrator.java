@@ -11,6 +11,7 @@ import com.eoiagent.core.Goal;
 import com.eoiagent.core.RunId;
 import com.eoiagent.core.TaskList;
 import com.eoiagent.core.ToolCall;
+import com.eoiagent.core.ToolCallMeta;
 import com.eoiagent.core.ToolResult;
 import com.eoiagent.core.ToolSpec;
 import com.eoiagent.memory.ChatMessageRecord;
@@ -131,8 +132,13 @@ public final class ReActOrchestrator implements Orchestrator {
                 return new AgentRun(run, answer, emptyTasks(), List.of(), steps);
             }
 
+            // Replay the assistant's tool-call turn into history so the provider sees each TOOL
+            // result paired with the request that caused it (T-350, ToolCallMeta convention).
+            history.add(new ChatMessageRecord(ChatRole.ASSISTANT,
+                    result.text() == null ? "" : result.text(), Instant.now(), ToolCallMeta.encode(calls)));
+
             for (ToolCall call : calls) {
-                ToolCall scoped = new ToolCall(call.toolName(), call.arguments(), run);
+                ToolCall scoped = new ToolCall(call.callId(), call.toolName(), call.arguments(), run);
                 Span toolSpan = trace.start("tool_call", Map.of("run", run.value(), "tool", call.toolName()));
                 ToolResult toolResult;
                 try {
@@ -142,7 +148,8 @@ public final class ReActOrchestrator implements Orchestrator {
                     throw e;
                 }
                 trace.end(toolSpan, toolResult.ok() ? SpanStatus.OK : SpanStatus.ERROR);
-                history.add(message(ChatRole.TOOL, observe(toolResult, run, offloadThreshold)));
+                history.add(new ChatMessageRecord(ChatRole.TOOL,
+                        observe(toolResult, run, offloadThreshold), Instant.now(), ToolCallMeta.forResult(scoped)));
             }
         }
 

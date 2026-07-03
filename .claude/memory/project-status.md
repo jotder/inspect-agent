@@ -29,8 +29,18 @@ CI exists). Owner directives: model choice must be pluggable as models progress 
 otherwise architect's discretion. New ADRs: **0013** (pluggable models, config-first + eval
 certification), **0014** (classpath jars + Automatic-Module-Name, NO JPMS).
 
+**T-350 DONE (2026-07-03):** tool calls now map across the LC4j seam both ways. `ToolCall` gained
+a nullable `callId` as FIRST component (back-compat 3-arg ctor delegates); `ToolCallMeta` (core,
+pure-JDK encoder) carries assistant-tool-call turns + paired TOOL results in ChatMessageRecord.meta;
+`ToolMapping`/`MessageMapping` (model) decode via LC4j internal Json + `JsonSchemaElementJsonUtils
+.fromMap` (exact inverse of JavaApiTool's toMap); ReAct loop now replays the assistant tool-call
+turn and preserves callId when scoping. Malformed model-emitted arg JSON degrades to
+`{"_raw": <string>}` (never crashes; dispatch validation reports). KEY: OpenAI-protocol servers
+REQUIRE the tool result to echo the request's call id — legacy meta-less TOOL records still map to
+UserMessage (fallback).
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (NEW, do first):** T-350 tool-call mapping, T-351 memory-in-loop,
+- **Phase 3.5 Integration (T-350 ✓):** T-351 memory-in-loop,
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

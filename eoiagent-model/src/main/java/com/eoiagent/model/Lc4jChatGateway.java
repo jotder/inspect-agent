@@ -8,7 +8,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.output.TokenUsage;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -17,8 +16,9 @@ import java.util.Objects;
  * normalizes failures to {@link ModelUnavailableException}. Concrete backends (Ollama,
  * OpenAI-compatible) only supply the constructed models + {@link ModelInfo}; tests inject fakes.
  *
- * <p>Chat-only: {@link #embed} is unsupported (embedding has its own backend). Tool-call mapping is
- * deferred — {@code toolCalls()} is currently always empty.
+ * <p>Chat-only: {@link #embed} is unsupported (embedding has its own backend). Tool calls map both
+ * ways (T-350): request {@code tools} go out as LC4j {@code ToolSpecification}s and the model's
+ * {@code ToolExecutionRequest}s come back as {@link ChatResult#toolCalls()}.
  */
 public class Lc4jChatGateway implements LlmGateway, AutoCloseable {
 
@@ -36,9 +36,7 @@ public class Lc4jChatGateway implements LlmGateway, AutoCloseable {
     public ChatResult chat(ChatRequest request) {
         Objects.requireNonNull(request, "request");
         try {
-            ChatResponse response = chatModel.chat(dev.langchain4j.model.chat.request.ChatRequest.builder()
-                    .messages(MessageMapping.toLc4j(request.messages()))
-                    .build());
+            ChatResponse response = chatModel.chat(toLc4jRequest(request));
             return toChatResult(response);
         } catch (RuntimeException e) {
             throw new ModelUnavailableException(
@@ -53,10 +51,7 @@ public class Lc4jChatGateway implements LlmGateway, AutoCloseable {
         if (streamingModel == null) {
             throw new ModelUnavailableException("streaming not supported by " + modelInfo.modelId());
         }
-        var lc = dev.langchain4j.model.chat.request.ChatRequest.builder()
-                .messages(MessageMapping.toLc4j(request.messages()))
-                .build();
-        streamingModel.chat(lc, new StreamingChatResponseHandler() {
+        streamingModel.chat(toLc4jRequest(request), new StreamingChatResponseHandler() {
             @Override
             public void onPartialResponse(String token) {
                 sink.onToken(token);
@@ -94,10 +89,19 @@ public class Lc4jChatGateway implements LlmGateway, AutoCloseable {
         // The shared JDK HttpClient is managed by the JVM; nothing backend-specific to close here.
     }
 
+    private static dev.langchain4j.model.chat.request.ChatRequest toLc4jRequest(ChatRequest request) {
+        var builder = dev.langchain4j.model.chat.request.ChatRequest.builder()
+                .messages(MessageMapping.toLc4j(request.messages()));
+        if (request.tools() != null && !request.tools().isEmpty()) {
+            builder.toolSpecifications(ToolMapping.toLc4j(request.tools()));
+        }
+        return builder.build();
+    }
+
     private ChatResult toChatResult(ChatResponse response) {
         AiMessage ai = response.aiMessage();
         String text = ai == null || ai.text() == null ? "" : ai.text();
-        return new ChatResult(text, List.of(), modelInfo, toUsage(response.tokenUsage()));
+        return new ChatResult(text, ToolMapping.toToolCalls(ai), modelInfo, toUsage(response.tokenUsage()));
     }
 
     private static Usage toUsage(TokenUsage u) {
