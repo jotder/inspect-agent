@@ -45,6 +45,12 @@ final class ScriptedGateway implements LlmGateway {
         return this;
     }
 
+    /** Enqueue a turn carrying one fully-specified tool call (name + arguments), e.g. navigation. */
+    ScriptedGateway toolCallWith(ToolCall call) {
+        scripted.add(new ChatResult("", List.of(call), MODEL, null));
+        return this;
+    }
+
     ScriptedGateway finalText(String text) {
         scripted.add(new ChatResult(text, List.of(), MODEL, null));
         return this;

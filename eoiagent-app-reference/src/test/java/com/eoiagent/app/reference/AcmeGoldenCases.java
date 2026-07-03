@@ -1,15 +1,19 @@
 package com.eoiagent.app.reference;
 
 import com.eoiagent.core.AnswerKind;
+import com.eoiagent.core.NavigationIntent;
 import com.eoiagent.core.Role;
+import com.eoiagent.core.ToolCall;
 import com.eoiagent.eval.AnswerAssertion;
 import com.eoiagent.eval.EvalCase;
 import com.eoiagent.eval.EvalSuite;
 import com.eoiagent.eval.Expectation;
 import com.eoiagent.eval.MatchMode;
+import com.eoiagent.eval.NavigationAssertion;
 import com.eoiagent.model.StubLlmGateway;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -46,14 +50,32 @@ final class AcmeGoldenCases {
                     "Pipeline Detail", "Open the Pipeline Detail page for that pipeline id.",
                     List.of()));
 
+    /**
+     * T-353: the navigation golden — the scripted model proposes the reserved navigation tool call;
+     * the PLATFORM's NavigationTool validates it against the reference catalog and the loop returns
+     * a typed NAVIGATION answer. Asserted end-to-end through the assembled platform.
+     */
+    private static final ToolCall NAV_REPLY = new ToolCall(NavigationIntent.TOOL_NAME,
+            Map.of("pageId", "kpi-dashboard",
+                    "params", Map.of("metric", "revenue"),
+                    "rationale", "Revenue metrics live on the KPI Dashboard."), null);
+
+    private static final EvalCase NAV_CASE = new EvalCase("nav-revenue-dashboard",
+            "Take me to the revenue dashboard", null, Role.USER,
+            new Expectation(AnswerKind.NAVIGATION, null, List.of(),
+                    new NavigationAssertion("kpi-dashboard", Map.of("metric", "revenue"), null, null),
+                    List.of()),
+            Set.of("acme", "navigation"));
+
     static EvalSuite suite() {
-        List<EvalCase> cases = CASES.stream()
+        List<EvalCase> cases = new java.util.ArrayList<>(CASES.stream()
                 .map(g -> new EvalCase(g.id(), g.prompt(), null, g.role(),
                         new Expectation(AnswerKind.TEXT,
                                 new AnswerAssertion(MatchMode.CONTAINS, g.mustContain(), 0.0),
                                 List.of(), null, g.mustCite()),
                         Set.of("acme", "qa")))
-                .toList();
+                .toList());
+        cases.add(NAV_CASE);
         return new EvalSuite("acme-golden", cases);
     }
 
@@ -62,6 +84,7 @@ final class AcmeGoldenCases {
         for (Golden g : CASES) {
             builder.replyText(g.reply());
         }
+        builder.replyToolCalls(NAV_REPLY); // one reply per case, in suite order — NAV_CASE is last
         return builder.build();
     }
 }

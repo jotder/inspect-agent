@@ -98,6 +98,15 @@ interface ApprovalHandler {                  // host implements; Phase 2 HITL
 
 ## Behavior / algorithm
 
+**Navigation as built (T-353):** the live path emits `NavigationIntent` through the reserved
+`navigate_to_page` tool (`NavigationIntent.TOOL_NAME`). `PlatformBuilder` derives that tool from
+the pack's `NavigationCatalog` (its description enumerates the pages + params; its schema takes
+`pageId`/`params`/`rationale`); the tool validates a proposal — unknown page or missing required
+param returns an ordinary tool error the model can correct — and a successful dispatch makes the
+`ReActOrchestrator` end the run with `AgentAnswer(NAVIGATION, NavigationIntent)` (DECISION
+audited). The agent never routes; the host resolves the intent. Demo:
+`eoiagent-examples/LiveNavigationDemo`; golden: `nav-revenue-dashboard`.
+
 ### Session open
 
 1. `AgentService.open(req)`: validate `req` against the active profile (`ConfigProvider`), allocate a `SessionId`, build the `AgentContext(session, user, role, profile, page=req.initialPage(), attributes)`.

@@ -158,6 +158,11 @@ public final class PlatformBuilder {
             registry.register(tool);
             track(owned, tool); // a host tool may hold a resource (e.g. a JDBC handle)
         }
+        // T-353: packs with navigable pages get the reserved navigation tool; the model proposes a
+        // page, the tool validates it against the catalog, and the loop returns a typed intent.
+        if (!pack.navigationCatalog().pages().isEmpty()) {
+            registry.register(new NavigationTool(pack.navigationCatalog()));
+        }
 
         Scratchpad scratchpad = new InMemoryScratchpad();
         track(owned, scratchpad);

@@ -10,6 +10,7 @@ import com.eoiagent.core.Citation;
 import com.eoiagent.core.ConfigException;
 import com.eoiagent.core.Goal;
 import com.eoiagent.core.GoalKind;
+import com.eoiagent.core.NavigationIntent;
 import com.eoiagent.core.RetrievalQuery;
 import com.eoiagent.core.RetrievedChunk;
 import com.eoiagent.core.RunId;
@@ -272,6 +273,23 @@ public final class ReActOrchestrator implements Orchestrator {
                     throw e;
                 }
                 trace.end(toolSpan, toolResult.ok() ? SpanStatus.OK : SpanStatus.ERROR);
+
+                // T-353: a successful dispatch of the reserved navigation tool ends the run with a
+                // typed NAVIGATION answer — the HOST performs the routing, never the agent. A failed
+                // one (unknown page, missing param) flows back as a normal tool observation so the
+                // model can correct itself.
+                if (toolResult.ok() && NavigationIntent.TOOL_NAME.equals(scoped.toolName())) {
+                    NavigationIntent intent = navigationIntent(toolResult);
+                    audit.record(event(ctx, run, AuditKind.DECISION,
+                            "navigation to " + intent.targetPageId()));
+                    String text = intent.rationale() == null || intent.rationale().isBlank()
+                            ? "Navigate to " + intent.targetPageId() : intent.rationale();
+                    persistTurns(ctx, transcript, userTurn, text);
+                    AgentAnswer answer = new AgentAnswer(AnswerKind.NAVIGATION, text, null, intent,
+                            citations, run);
+                    return new AgentRun(run, answer, emptyTasks(), List.of(), steps);
+                }
+
                 history.add(new ChatMessageRecord(ChatRole.TOOL,
                         observe(toolResult, run, offloadThreshold), Instant.now(), ToolCallMeta.forResult(scoped)));
             }
@@ -341,6 +359,19 @@ public final class ReActOrchestrator implements Orchestrator {
 
     private static TaskList emptyTasks() {
         return new TaskList(List.<com.eoiagent.core.Task>of()); // ReAct (Flow B) has no planned task list
+    }
+
+    /** Builds the typed intent from the navigation tool's canonical result map (see NavigationIntent). */
+    @SuppressWarnings("unchecked")
+    private static NavigationIntent navigationIntent(ToolResult result) {
+        if (!(result.value() instanceof Map<?, ?> value)) {
+            throw new IllegalStateException("navigation tool returned no intent map: " + result.value());
+        }
+        Object params = value.get("parameters");
+        return new NavigationIntent(
+                String.valueOf(value.get("targetPageId")),
+                params instanceof Map ? Map.copyOf((Map<String, String>) params) : Map.of(),
+                value.get("rationale") == null ? null : String.valueOf(value.get("rationale")));
     }
 
     /** The retrieved context block appended to the system message — each chunk tagged with its source. */

@@ -62,8 +62,19 @@ default now falls back to classpath resources — the reference pack's bundled c
 now assert mustCite acme-docs via real ONNX retrieval, green. NOTE: reference-pack boots now load
 ONNX + ingest (~3s each) — perf pass T-402 should share/cache the embedding model.
 
+**T-353 DONE (2026-07-03):** NavigationIntent live — the signature behavior (audit finding F4
+closed). Design: navigation is the reserved TOOL `navigate_to_page` (`NavigationIntent.TOOL_NAME`
+constant in core). `PlatformBuilder` registers a package-private `NavigationTool` derived from the
+pack's NavigationCatalog (description enumerates pages/params; validates pageId + required
+ParamSpecs; returns canonical intent map targetPageId/parameters/rationale). `ReActOrchestrator`:
+successful dispatch of that name → terminal `AgentAnswer(NAVIGATION, intent)` + DECISION audit
+"navigation to <page>"; FAILED proposal flows back as a tool observation so the model
+self-corrects (tested). Golden `nav-revenue-dashboard` green E2E through the platform. No host
+changes (goals stay QA; the model chooses the tool). Capability=READ_DOCS (no NAVIGATE cap
+exists). Demo `LiveNavigationDemo` shows reject→correct.
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓):**
+- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

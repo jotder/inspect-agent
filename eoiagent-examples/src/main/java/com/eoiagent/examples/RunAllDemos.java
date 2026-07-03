@@ -41,6 +41,7 @@ public final class RunAllDemos {
 
         MultiTurnMemoryDemo.main(args);    // session memory in the live loop (T-351)
         RagCitationsDemo.main(args);       // RAG + citations in the live loop (T-352)
+        LiveNavigationDemo.main(args);     // typed NavigationIntent through the loop (T-353)
 
         System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");

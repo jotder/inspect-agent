@@ -184,6 +184,12 @@ sources. See
 | Real-model tool calling (T-350) | `Lc4jChatGateway` + `ToolMapping`/`ToolCallMeta` | tool round-trip test: `Lc4jChatGatewayToolCallTest` |
 | Session memory in the loop (T-351) | `ReActOrchestrator` + `PlatformBuilder.memoryStore(...)` | [`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java) |
 | RAG + citations in the loop (T-352) | `PlatformBuilder` knowledge stack + `ReActOrchestrator.builder().retriever(...)` | [`RagCitationsDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/RagCitationsDemo.java) |
+| Typed NavigationIntent (T-353) | reserved `navigate_to_page` tool from the pack's `NavigationCatalog` | [`LiveNavigationDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/LiveNavigationDemo.java) |
+
+**"The agent operates the UI."** It never does — navigation answers are *typed intents*
+(`AgentAnswer(NAVIGATION, NavigationIntent)`) the model proposes via the reserved
+`navigate_to_page` tool, validated against the pack's `NavigationCatalog` (bad proposals bounce
+back so the model self-corrects). Your product decides how — and whether — to route.
 
 ## Optional infrastructure
 
