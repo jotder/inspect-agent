@@ -27,6 +27,7 @@
     <assertj.version>3.27.3</assertj.version>
     <slf4j.version>2.0.17</slf4j.version>
     <postgresql.version>42.7.4</postgresql.version>
+    <opentelemetry.version>1.44.1</opentelemetry.version>
   </properties>
 
   <dependencyManagement>
@@ -80,6 +81,15 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-api</artifactId>
         <version>${slf4j.version}</version>
+      </dependency>
+
+      <!-- OpenTelemetry API (ADR-0010 quarantine, T-401): optional, adapter-only dependency of
+           OpenTelemetryTraceCollector (eoiagent-observability). Absence must not break consumers —
+           NoopTraceCollector is the default; OFFLINE never selects this adapter (spec AC6). -->
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>${opentelemetry.version}</version>
       </dependency>
 
       <!-- PostgreSQL JDBC driver (T-206: JdbcAuditSink, PostgresMemoryStore). Driver is provided by

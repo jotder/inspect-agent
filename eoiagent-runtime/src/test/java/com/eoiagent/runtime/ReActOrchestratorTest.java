@@ -110,4 +110,32 @@ class ReActOrchestratorTest {
         assertThat(result[0].answer().kind()).isNotNull();
         assertThat(sink.kinds()).contains(AuditKind.ERROR);
     }
+
+    @Test
+    void emitsSpansForModelAndToolCallsWhenATraceCollectorIsInjected() { // T-401
+        RecordingAuditSink sink = new RecordingAuditSink();
+        RecordingTraceCollector trace = new RecordingTraceCollector();
+        ScriptedGateway gateway = new ScriptedGateway().toolCall("echo").finalText("done");
+        ReActOrchestrator orch = new ReActOrchestrator(
+                gateway, registryWith("echo", "ok", sink), new InMemoryScratchpad(),
+                sink, new FakeRuntimeConfig(12, 8192), trace);
+
+        orch.run(qa(), ctx());
+
+        assertThat(trace.started).containsExactly("model_call", "tool_call", "model_call");
+        assertThat(trace.ended).extracting(RecordingTraceCollector.Ended::status)
+                .containsOnly(com.eoiagent.observability.SpanStatus.OK);
+        assertThat(trace.started).hasSize(trace.ended.size()); // every started span is ended
+    }
+
+    @Test
+    void defaultCtorNeverThrowsWithoutAnExplicitTraceCollector() { // NoopTraceCollector default (AC6)
+        RecordingAuditSink sink = new RecordingAuditSink();
+        ScriptedGateway gateway = new ScriptedGateway().finalText("done");
+        ReActOrchestrator orch = new ReActOrchestrator(
+                gateway, registryWith("echo", "ok", sink), new InMemoryScratchpad(),
+                sink, new FakeRuntimeConfig(12, 8192));
+
+        assertThatCode(() -> orch.run(qa(), ctx())).doesNotThrowAnyException();
+    }
 }

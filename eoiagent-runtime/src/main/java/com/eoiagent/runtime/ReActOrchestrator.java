@@ -21,6 +21,9 @@ import com.eoiagent.model.ChatResult;
 import com.eoiagent.model.LlmGateway;
 import com.eoiagent.model.ModelInfo;
 import com.eoiagent.observability.AuditSink;
+import com.eoiagent.observability.Span;
+import com.eoiagent.observability.SpanStatus;
+import com.eoiagent.observability.TraceCollector;
 import com.eoiagent.scratchpad.Scratchpad;
 import com.eoiagent.tool.ToolRegistry;
 
@@ -51,14 +54,36 @@ public final class ReActOrchestrator implements Orchestrator {
     private final Scratchpad scratchpad;
     private final AuditSink audit;
     private final ConfigProvider config;
+    private final TraceCollector trace;
 
     public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
                              AuditSink audit, ConfigProvider config) {
+        this(gateway, tools, scratchpad, audit, config, NOOP_TRACE);
+    }
+
+    // Package has no dependency on eoiagent-observability's concrete NoopTraceCollector (runtime
+    // depends only on the TraceCollector PORT, in core) — so the no-tracing default lives here.
+    private static final TraceCollector NOOP_TRACE = new TraceCollector() {
+        @Override
+        public Span start(String name, Map<String, Object> attrs) {
+            return new Span(name, name, 0L);
+        }
+
+        @Override
+        public void end(Span span, SpanStatus status) {
+            // no-op
+        }
+    };
+
+    /** T-401: optional {@link TraceCollector} for span-level tracing alongside the mandatory audit trail. */
+    public ReActOrchestrator(LlmGateway gateway, ToolRegistry tools, Scratchpad scratchpad,
+                             AuditSink audit, ConfigProvider config, TraceCollector trace) {
         this.gateway = Objects.requireNonNull(gateway, "gateway");
         this.tools = Objects.requireNonNull(tools, "tools");
         this.scratchpad = Objects.requireNonNull(scratchpad, "scratchpad");
         this.audit = Objects.requireNonNull(audit, "audit");
         this.config = Objects.requireNonNull(config, "config");
+        this.trace = Objects.requireNonNull(trace, "trace");
     }
 
     @Override
@@ -88,7 +113,15 @@ public final class ReActOrchestrator implements Orchestrator {
         int steps = 0;
         while (steps < maxSteps) {
             steps++;
-            ChatResult result = gateway.chat(new ChatRequest(history, visible, ChatOptions.defaults()));
+            Span modelSpan = trace.start("model_call", Map.of("run", run.value(), "step", steps));
+            ChatResult result;
+            try {
+                result = gateway.chat(new ChatRequest(history, visible, ChatOptions.defaults()));
+            } catch (RuntimeException e) {
+                trace.end(modelSpan, SpanStatus.ERROR);
+                throw e;
+            }
+            trace.end(modelSpan, SpanStatus.OK);
             audit.record(event(ctx, run, AuditKind.MODEL_CALL, "model: " + modelName(result.model())));
 
             List<ToolCall> calls = result.toolCalls();
@@ -100,7 +133,15 @@ public final class ReActOrchestrator implements Orchestrator {
 
             for (ToolCall call : calls) {
                 ToolCall scoped = new ToolCall(call.toolName(), call.arguments(), run);
-                ToolResult toolResult = tools.dispatch(scoped, ctx); // audited TOOL_CALL inside dispatch
+                Span toolSpan = trace.start("tool_call", Map.of("run", run.value(), "tool", call.toolName()));
+                ToolResult toolResult;
+                try {
+                    toolResult = tools.dispatch(scoped, ctx); // audited TOOL_CALL inside dispatch
+                } catch (RuntimeException e) {
+                    trace.end(toolSpan, SpanStatus.ERROR);
+                    throw e;
+                }
+                trace.end(toolSpan, toolResult.ok() ? SpanStatus.OK : SpanStatus.ERROR);
                 history.add(message(ChatRole.TOOL, observe(toolResult, run, offloadThreshold)));
             }
         }

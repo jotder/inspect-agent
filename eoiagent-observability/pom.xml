@@ -11,9 +11,10 @@
   <artifactId>eoiagent-observability</artifactId>
   <name>eoiagent-observability</name>
   <description>
-    Audit &amp; observability (T-113). Phase 1: append-only AuditSink adapters — FileAuditSink
-    (newline-delimited JSON, JDK only) and Slf4jAuditSink (dedicated com.eoiagent.audit logger,
-    separate from application logging). JDBC/composite sinks and tracing arrive in later phases.
+    Audit &amp; observability (T-113, T-401). Phase 1: append-only AuditSink adapters — FileAuditSink
+    (newline-delimited JSON, JDK only), Slf4jAuditSink (dedicated com.eoiagent.audit logger,
+    separate from application logging) and JdbcAuditSink. Phase 4 (T-401): NoopTraceCollector
+    (default) and OpenTelemetryTraceCollector (optional, quarantined OTel bridge).
   </description>
 
   <dependencies>
@@ -44,6 +45,14 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <!-- OpenTelemetryTraceCollector (T-401, ADR-0010 quarantine): optional so a host that never
+         constructs this adapter never needs the dependency on its classpath. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+      <optional>true</optional>
     </dependency>
   </dependencies>
 </project>

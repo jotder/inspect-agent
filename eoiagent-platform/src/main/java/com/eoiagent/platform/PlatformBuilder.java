@@ -16,7 +16,9 @@ import com.eoiagent.model.OllamaChatAdapter;
 import com.eoiagent.model.OpenAiCompatibleChatAdapter;
 import com.eoiagent.model.RoutingLlmGateway;
 import com.eoiagent.observability.AuditSink;
+import com.eoiagent.observability.NoopTraceCollector;
 import com.eoiagent.observability.Slf4jAuditSink;
+import com.eoiagent.observability.TraceCollector;
 import com.eoiagent.runtime.Orchestrator;
 import com.eoiagent.runtime.ReActOrchestrator;
 import com.eoiagent.safety.Guardrail;
@@ -56,6 +58,7 @@ public final class PlatformBuilder {
     private ConfigProvider configOverride;
     private AuditSink auditOverride;
     private LlmGateway gatewayOverride;
+    private TraceCollector traceOverride;
 
     /** The application pack to assemble. Required. */
     public PlatformBuilder pack(ApplicationPack pack) {
@@ -81,6 +84,16 @@ public final class PlatformBuilder {
         return this;
     }
 
+    /**
+     * Optional host override; when set, replaces the default {@link NoopTraceCollector} (T-401).
+     * Tracing is best-effort spans alongside the mandatory audit trail — never wire an OTel/OTLP
+     * collector under {@code OFFLINE} (spec AC6, zero-egress).
+     */
+    public PlatformBuilder traceCollector(TraceCollector traceCollector) {
+        this.traceOverride = traceCollector;
+        return this;
+    }
+
     /** Validate → wire → ready. Throws before building anything if the pack is invalid. */
     public AgentPlatform start() {
         if (pack == null) {
@@ -94,6 +107,7 @@ public final class PlatformBuilder {
 
         ConfigProvider config = configOverride != null ? configOverride : buildConfig(pack.config());
         AuditSink audit = auditOverride != null ? auditOverride : new Slf4jAuditSink();
+        TraceCollector trace = traceOverride != null ? traceOverride : new NoopTraceCollector();
 
         LlmGateway gateway;
         if (gatewayOverride != null) {
@@ -115,7 +129,7 @@ public final class PlatformBuilder {
 
         Guardrail guardrail = new Lc4jInputGuardrail();
 
-        Orchestrator orchestrator = new ReActOrchestrator(gateway, registry, scratchpad, audit, config);
+        Orchestrator orchestrator = new ReActOrchestrator(gateway, registry, scratchpad, audit, config, trace);
         AgentService service = new DefaultAgentService(
                 pack.metadata().appId(), config, orchestrator, guardrail, audit);
 
