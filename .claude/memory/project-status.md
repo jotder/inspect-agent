@@ -61,6 +61,9 @@ default now falls back to classpath resources — the reference pack's bundled c
 (/acme/docs/*.md) was NEVER ingestable before. Golden cases qa-ingestion-cadence/qa-lakehouse-zones
 now assert mustCite acme-docs via real ONNX retrieval, green. NOTE: reference-pack boots now load
 ONNX + ingest (~3s each) — perf pass T-402 should share/cache the embedding model.
+[UPDATE 2026-07-03: T-402 measured this — the ~3s was ingestion + once-per-JVM first load, NOT
+per-boot model reload; sharing the model gave no suite speedup (6.4s→6.4s). Kept anyway: one
+native ONNX session per JVM instead of one per boot.]
 
 **T-353 DONE (2026-07-03):** NavigationIntent live — the signature behavior (audit finding F4
 closed). Design: navigation is the reserved TOOL `navigate_to_page` (`NavigationIntent.TOOL_NAME`
@@ -133,8 +136,9 @@ eoiagent-safety dep.
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).
-- Phase 4: T-403 ✓ (security review). Left: T-402 perf (live-latency AC blocked — no Ollama on
-  this box; offline slice = share/cache ONNX embedding model across boots), T-404 packaging,
+- Phase 4: T-403 ✓ (security review). T-402 offline slice ✓ (ONNX session shared per JVM —
+  memory dedup only, no wall-clock win; measured 6.4s→6.4s examples suite). T-402's headline AC
+  (live-model latency budgets) BLOCKED until Ollama exists on this box. Left: T-404 packaging,
   T-405 CI gates.
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc

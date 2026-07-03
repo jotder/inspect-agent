@@ -32,4 +32,20 @@ class OnnxEmbeddingAdapterTest {
         float[] b = MODEL.embed("a completely unrelated weather forecast").content().vector();
         assertThat(a).isNotEqualTo(b);
     }
+
+    @Test
+    void modelIsLoadedOncePerJvmAndSharedAcrossInstances() { // T-402: cheap re-construction
+        assertThat(OnnxEmbeddingAdapter.sharedDelegate())
+                .isSameAs(OnnxEmbeddingAdapter.sharedDelegate());
+
+        long start = System.nanoTime();
+        OnnxEmbeddingAdapter second = new OnnxEmbeddingAdapter();
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+        assertThat(second.embed("still works").content().vector()).hasSize(384);
+        // The first load takes seconds; a shared re-construction must be near-instant.
+        assertThat(elapsedMs)
+                .as("re-constructing the adapter must not reload the ONNX model")
+                .isLessThan(500);
+    }
 }
