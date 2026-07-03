@@ -147,6 +147,16 @@ distributed deps, all permissive; snapshot committed to docs/legal/THIRD-PARTY.t
 module-info.class). New doc docs/packaging/packaging-and-licensing.md (type=packaging, indexed).
 NOTE: license report + shade need network first time (not offline-runnable from cold cache).
 
+**T-405 DONE (2026-07-03) — PHASE 4 COMPLETE (except T-402's live-latency AC).** First CI:
+`.github/workflows/ci.yml` (PR gate, ubuntu/Temurin 25: okf check → `mvn -B clean install` full
+reactor incl. golden suites, stub gateway → packaging check-modules.mjs → license gate) and
+`.github/workflows/live-certification.yml` (nightly 02:30 UTC + workflow_dispatch: Ollama
+container, pulls model, runs LiveModelCertificationTest via EOIAGENT_IT_LLM_* env). HONEST
+CONSTRAINT: GH-hosted runners are CPU-only → scheduled run defaults qwen2.5:3b-instruct as a
+live-path SMOKE; real candidates (qwen2.5:14b, Ornith 9B) certify via dispatch on self-hosted
+hardware or locally. Doc docs/ci/ci-gates.md (type=ci, indexed). Workflows are committed but
+INERT until the repo is pushed to GitHub (local-only commit policy; jotder/inspect-agent).
+
 **Remaining (restructured backlog):**
 - **Phase 3.5 Integration COMPLETE (T-350…T-356 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
@@ -155,7 +165,9 @@ NOTE: license report + shade need network first time (not offline-runnable from 
 - Phase 4: T-403 ✓ (security review). T-402 offline slice ✓ (ONNX session shared per JVM —
   memory dedup only, no wall-clock win; measured 6.4s→6.4s examples suite). T-402's headline AC
   (live-model latency budgets) BLOCKED until Ollama exists on this box. T-404 packaging ✓.
-  Left: T-405 CI gates (last Phase-4 ticket).
+  T-405 CI gates ✓ — PHASE 4 COMPLETE except that one blocked AC. Next frontier: install Ollama
+  (unblocks T-402 live latency + first real T-356 certification), push repo (activates CI),
+  or backlog §2 optimizations / §5 reflection loop.
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc
 references corrected to JDK Class-File API arch tests (conventions §2 has the note); ADR-0012

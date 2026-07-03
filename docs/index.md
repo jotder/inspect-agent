@@ -48,6 +48,10 @@ Curated context for AI agents, in [Open Knowledge Format](https://github.com/Goo
 * [Scratchpad / Virtual FS — Spec](specs/scratchpad.md) - Context offloading so the LLM context window doesn't blow up: large intermediate results are stored by handle and re-read on demand.
 * [Tool Registry — Spec](specs/tool-registry.md) - Expose the host's Java API as agent tools and call external tools via MCP, with role/profile visibility filtering and approval+audit-enforced dispatch.
 
+## CI
+
+* [CI Gates (T-405)](ci/ci-gates.md) - The offline PR gate (full reactor + golden suites + docs/packaging/license checks) and the nightly/manual live-model certification job.
+
 ## Packaging & Licensing
 
 * [Packaging & Licensing (T-404)](packaging/packaging-and-licensing.md) - Classpath jars with Automatic-Module-Name (ADR-0014), optional shaded uber-jar, and the permissive-only third-party license report (ADR-0012 §4).
