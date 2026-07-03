@@ -107,6 +107,13 @@ param returns an ordinary tool error the model can correct — and a successful 
 audited). The agent never routes; the host resolves the intent. Demo:
 `eoiagent-examples/LiveNavigationDemo`; golden: `nav-revenue-dashboard`.
 
+**Streaming as built (T-355):** `askStream` forwards genuine model tokens: the `Orchestrator` port
+gained `run(goal, ctx, Consumer<String> onToken)` (default = post-hoc word emission, so
+non-streaming orchestrators keep the old behavior) and `ReActOrchestrator` overrides it to drive
+each model turn through `LlmGateway.chatStream` — tool-call turns stream no text; a backend
+without streaming support degrades to one whole-text chunk (never a failed run). Terminal events
+stay on `AnswerSink.onComplete/onError`. Demo: `eoiagent-examples/StreamingAnswerDemo`.
+
 ### Session open
 
 1. `AgentService.open(req)`: validate `req` against the active profile (`ConfigProvider`), allocate a `SessionId`, build the `AgentContext(session, user, role, profile, page=req.initialPage(), attributes)`.

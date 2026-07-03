@@ -171,6 +171,48 @@ class PlatformBuilderTest {
         }
     }
 
+    @Test
+    void askStreamDeliversLiveTokensThenTheFinalAnswer() { // T-355
+        StubLlmGateway gateway = StubLlmGateway.builder()
+                .replyText("ingestion runs nightly at 02:00 UTC")
+                .build();
+        List<String> tokens = new java.util.ArrayList<>();
+        AgentAnswer[] complete = new AgentAnswer[1];
+
+        try (AgentPlatform platform = new PlatformBuilder()
+                .pack(new StubApplicationPack())
+                .llmGateway(gateway)
+                .start()) {
+
+            AgentSession session = platform.agentService().open(offlineSession());
+            session.askStream(ask("How often does ingestion run?"), new com.eoiagent.host.AnswerSink() {
+                @Override
+                public void onToken(String token) {
+                    tokens.add(token);
+                }
+
+                @Override
+                public void onArtifact(com.eoiagent.core.InlineArtifact artifact) {
+                }
+
+                @Override
+                public void onComplete(AgentAnswer finalAnswer) {
+                    complete[0] = finalAnswer;
+                }
+
+                @Override
+                public void onError(com.eoiagent.core.EoiAgentException error) {
+                    throw error;
+                }
+            });
+            session.close();
+        }
+
+        assertThat(tokens).containsExactly("ingestion", "runs", "nightly", "at", "02:00", "UTC");
+        assertThat(complete[0]).isNotNull();
+        assertThat(complete[0].kind()).isEqualTo(AnswerKind.TEXT);
+    }
+
     // --- test doubles -----------------------------------------------------------------------------
 
     /** Delegating store that remembers which session was written, so the test can read it back. */

@@ -89,8 +89,18 @@ from T-354: orchestrator selection by GoalKind (host sessions hardcode QA — ne
 signal from the host; revisit with T-356/Phase 4). Demo `ConfigSwapModelDemo` (DemoConfig gained a
 values-map ctor).
 
+**T-355 DONE (2026-07-03):** real token streaming. `Orchestrator` PORT gained
+`run(goal, ctx, Consumer<String> onToken)` as a DEFAULT method (post-hoc word emission — other
+orchestrators unchanged); `ReActOrchestrator` overrides via `chatOnce` helper: with a listener,
+each model turn goes through `gateway.chatStream` (internal TokenSink → CompletableFuture.join);
+synchronous `ModelUnavailableException` (backend can't stream) → blocking chat + final text as ONE
+chunk (degraded, never failed); mid-stream onError → future exceptional → run's ERROR path.
+`DefaultAgentSession.askStream` now passes `sink::onToken` through `coreRun` (post-hoc splitting
+REMOVED from host). ScriptedGateway test double got token-split chatStream. Demo
+`StreamingAnswerDemo` (time-to-first-token teaching).
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓, T-354 ✓):**
+- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓, T-354 ✓, T-355 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

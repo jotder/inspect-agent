@@ -188,6 +188,7 @@ sources. See
 | Config-first model swap (T-354) | `eoiagent.model.chat.*` keys override the pack `ModelProfile` ([ADR-0013](docs/adr/0013-pluggable-models.md)) | [`ConfigSwapModelDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/ConfigSwapModelDemo.java) |
 | Mutating approval via platform (T-354) | `PlatformBuilder.approvalHandler(...)` + `MUTATING_ACTIONS`; headless = fail-closed DENIED | `PlatformWiringV2Test` (C4 asserted end-to-end) |
 | Policy ceiling (T-354) | pack `PolicyProfile` = restriction overlay on `RoleBasedPolicyEngine` — packs narrow, never widen | `PlatformWiringV2Test` |
+| Real token streaming (T-355) | `askStream` → `Orchestrator.run(goal, ctx, onToken)` → `LlmGateway.chatStream` | [`StreamingAnswerDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/StreamingAnswerDemo.java) |
 
 **"The agent operates the UI."** It never does — navigation answers are *typed intents*
 (`AgentAnswer(NAVIGATION, NavigationIntent)`) the model proposes via the reserved

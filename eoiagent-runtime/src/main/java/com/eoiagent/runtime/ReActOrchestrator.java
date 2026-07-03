@@ -192,11 +192,17 @@ public final class ReActOrchestrator implements Orchestrator {
 
     @Override
     public AgentRun run(Goal goal, AgentContext ctx) {
+        return run(goal, ctx, null);
+    }
+
+    /** T-355: forwards genuine model tokens live; falls back per turn if the backend can't stream. */
+    @Override
+    public AgentRun run(Goal goal, AgentContext ctx, java.util.function.Consumer<String> onToken) {
         Objects.requireNonNull(goal, "goal");
         Objects.requireNonNull(ctx, "ctx");
         RunId run = new RunId(UUID.randomUUID().toString());
         try {
-            return loop(goal, ctx, run);
+            return loop(goal, ctx, run, onToken);
         } catch (ConfigException e) {
             throw e; // unrecoverable config faults propagate past the run boundary (spec)
         } catch (RuntimeException e) {
@@ -207,7 +213,8 @@ public final class ReActOrchestrator implements Orchestrator {
         }
     }
 
-    private AgentRun loop(Goal goal, AgentContext ctx, RunId run) {
+    private AgentRun loop(Goal goal, AgentContext ctx, RunId run,
+                          java.util.function.Consumer<String> onToken) {
         int maxSteps = config.get(RuntimeConfigKeys.MAX_STEPS);
         int offloadThreshold = config.get(RuntimeConfigKeys.OFFLOAD_THRESHOLD_BYTES);
         List<ChatMessageRecord> transcript = priorTranscript(ctx);
@@ -241,7 +248,7 @@ public final class ReActOrchestrator implements Orchestrator {
             Span modelSpan = trace.start("model_call", Map.of("run", run.value(), "step", steps));
             ChatResult result;
             try {
-                result = gateway.chat(new ChatRequest(history, visible, ChatOptions.defaults()));
+                result = chatOnce(new ChatRequest(history, visible, ChatOptions.defaults()), onToken);
             } catch (RuntimeException e) {
                 trace.end(modelSpan, SpanStatus.ERROR);
                 throw e;
@@ -359,6 +366,50 @@ public final class ReActOrchestrator implements Orchestrator {
 
     private static TaskList emptyTasks() {
         return new TaskList(List.<com.eoiagent.core.Task>of()); // ReAct (Flow B) has no planned task list
+    }
+
+    /**
+     * One model turn. Without a listener this is the plain blocking call. With one, the turn runs
+     * through {@code chatStream}, forwarding text tokens live (tool-call turns usually stream no
+     * text); a backend that cannot stream ({@code ModelUnavailableException} before any token)
+     * falls back to the blocking call and emits the turn's final text as one chunk — degraded
+     * granularity, never a failed run.
+     */
+    private ChatResult chatOnce(ChatRequest request, java.util.function.Consumer<String> onToken) {
+        if (onToken == null) {
+            return gateway.chat(request);
+        }
+        java.util.concurrent.CompletableFuture<ChatResult> done = new java.util.concurrent.CompletableFuture<>();
+        try {
+            gateway.chatStream(request, new com.eoiagent.model.TokenSink() {
+                @Override
+                public void onToken(String token) {
+                    onToken.accept(token);
+                }
+
+                @Override
+                public void onComplete(ChatResult result) {
+                    done.complete(result);
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    done.completeExceptionally(error);
+                }
+            });
+        } catch (com.eoiagent.core.ModelUnavailableException e) {
+            ChatResult result = gateway.chat(request); // backend can't stream — degrade gracefully
+            if (result.text() != null && !result.text().isBlank()
+                    && (result.toolCalls() == null || result.toolCalls().isEmpty())) {
+                onToken.accept(result.text());
+            }
+            return result;
+        }
+        try {
+            return done.join();
+        } catch (java.util.concurrent.CompletionException e) {
+            throw e.getCause() instanceof RuntimeException re ? re : e;
+        }
     }
 
     /** Builds the typed intent from the navigation tool's canonical result map (see NavigationIntent). */

@@ -32,8 +32,9 @@ import java.util.UUID;
  * runs the input {@link Guardrail}, delegates to the {@link Orchestrator}, and returns the run's
  * typed {@link AgentAnswer} (TEXT / INLINE_ARTIFACT / NAVIGATION / CLARIFICATION). Runtime faults are
  * caught and surfaced as {@code AgentAnswer(ERROR)} — {@code ask} never throws past this boundary —
- * and every ask records at least one audit event. {@code askStream} runs the same logic and then
- * streams the answer text token-by-token to the host's {@link AnswerSink}.
+ * and every ask records at least one audit event. {@code askStream} runs the same logic while
+ * forwarding live model tokens to the host's {@link AnswerSink} (T-355); orchestrators without a
+ * streaming path fall back to post-hoc token emission via the port's default method.
  *
  * <p>Single-threaded from the caller's perspective; concurrent asks on one session are undefined.
  */
@@ -57,7 +58,7 @@ final class DefaultAgentSession implements AgentSession {
         ensureOpen();
         Objects.requireNonNull(msg, "msg");
         try {
-            return coreRun(msg);
+            return coreRun(msg, null);
         } catch (RuntimeException e) {
             return errorAnswer("ask failed: " + e.getMessage());
         }
@@ -70,16 +71,10 @@ final class DefaultAgentSession implements AgentSession {
         Objects.requireNonNull(sink, "sink");
         AgentAnswer answer;
         try {
-            answer = coreRun(msg);
+            answer = coreRun(msg, sink::onToken);
         } catch (RuntimeException e) {
             sink.onError(asEoiException(e));
             return;
-        }
-        String text = answer.text() == null ? "" : answer.text();
-        for (String token : text.split("\\s+")) {
-            if (!token.isEmpty()) {
-                sink.onToken(token);
-            }
         }
         if (answer.artifact() != null) {
             sink.onArtifact(answer.artifact());
@@ -93,7 +88,7 @@ final class DefaultAgentSession implements AgentSession {
     }
 
     /** Guardrail → orchestrator → typed answer + a DECISION audit. Genuine faults propagate. */
-    private AgentAnswer coreRun(UserMessage msg) {
+    private AgentAnswer coreRun(UserMessage msg, java.util.function.Consumer<String> onToken) {
         AgentContext ctx = withPage(msg.page());
         GuardrailResult guard = inputGuardrail.check(new GuardrailInput(GuardrailPhase.INPUT, msg.text(), null, ctx));
         if (guard.verdict() == GuardrailVerdict.FAIL) {
@@ -104,7 +99,7 @@ final class DefaultAgentSession implements AgentSession {
         }
         String text = guard.verdict() == GuardrailVerdict.REDACTED ? guard.transformedText() : msg.text();
 
-        AgentRun run = orchestrator.run(new Goal(text, GoalKind.QA), ctx);
+        AgentRun run = orchestrator.run(new Goal(text, GoalKind.QA), ctx, onToken);
         AgentAnswer answer = run.answer();
         String redactNote = guard.verdict() == GuardrailVerdict.REDACTED ? " (pii redacted)" : "";
         record(AuditKind.DECISION, run.id(), "ask -> " + answer.kind() + redactNote);

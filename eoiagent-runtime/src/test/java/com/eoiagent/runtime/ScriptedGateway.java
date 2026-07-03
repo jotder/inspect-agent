@@ -85,7 +85,21 @@ final class ScriptedGateway implements LlmGateway {
 
     @Override
     public void chatStream(ChatRequest request, TokenSink sink) {
-        throw new UnsupportedOperationException("not used in tests");
+        // T-355: same scripted replies, token-split like StubLlmGateway (whitespace tokens).
+        ChatResult result;
+        try {
+            result = chat(request);
+        } catch (RuntimeException e) {
+            sink.onError(e);
+            return;
+        }
+        String text = result.text() == null ? "" : result.text();
+        for (String token : text.split("\\s+")) {
+            if (!token.isEmpty()) {
+                sink.onToken(token);
+            }
+        }
+        sink.onComplete(result);
     }
 
     @Override

@@ -43,6 +43,7 @@ public final class RunAllDemos {
         RagCitationsDemo.main(args);       // RAG + citations in the live loop (T-352)
         LiveNavigationDemo.main(args);     // typed NavigationIntent through the loop (T-353)
         ConfigSwapModelDemo.main(args);    // pluggable models via config (T-354, ADR-0013)
+        StreamingAnswerDemo.main(args);    // real token streaming via askStream (T-355)
 
         System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");
