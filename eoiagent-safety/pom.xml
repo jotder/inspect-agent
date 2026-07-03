@@ -16,6 +16,11 @@
     Output guardrails (schema/retry) and the approval/policy engine arrive in later tickets.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.safety</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

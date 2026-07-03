@@ -15,6 +15,11 @@
     LangChain4j-backed adapters arrive in Phase 1 (T-101+).
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.model</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

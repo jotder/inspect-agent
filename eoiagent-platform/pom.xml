@@ -18,6 +18,11 @@
     arrives with later phases.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.platform</automatic.module.name>
+  </properties>
+
   <dependencies>
     <!-- The SPI a product implements, plus the core ports/domain types it returns. -->
     <dependency>

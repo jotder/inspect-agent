@@ -18,6 +18,11 @@
     eoiagent-platform + eoiagent-eval (test scope) to assemble the pack and run its golden set offline.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.app.reference</automatic.module.name>
+  </properties>
+
   <dependencies>
     <!-- The SPI this pack implements. Transitively brings only eoiagent-core domain types. -->
     <dependency>

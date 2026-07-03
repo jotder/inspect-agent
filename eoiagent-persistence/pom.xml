@@ -18,6 +18,11 @@
     is host-provided and pulled in (test scope) only for the env-gated integration test.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.persistence</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

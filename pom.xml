@@ -24,6 +24,9 @@
     <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
     <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.5.0</exec-maven-plugin.version>
+    <maven-jar-plugin.version>3.5.0</maven-jar-plugin.version>
+    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
+    <license-maven-plugin.version>2.5.0</license-maven-plugin.version>
   </properties>
 
   <!-- Reactor modules. Every coordinate from 02-domain-model.md must exist (T-001 AC2). -->
@@ -82,7 +85,83 @@
           <artifactId>exec-maven-plugin</artifactId>
           <version>${exec-maven-plugin.version}</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-jar-plugin</artifactId>
+          <version>${maven-jar-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>${maven-shade-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>license-maven-plugin</artifactId>
+          <version>${license-maven-plugin.version}</version>
+        </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <!--
+        T-404 / ADR-0014: every jar carries a stable Automatic-Module-Name so JPMS hosts get
+        "com.eoiagent.<module>" instead of a filename-derived name. No module-info anywhere
+        (deliberate split packages, illegal under JPMS). Each jar module declares its
+        <automatic.module.name> property; verified by tools/packaging/check-modules.mjs.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>${automatic.module.name}</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
+
+  <profiles>
+    <!--
+      T-404 / ADR-0012 §4: third-party license report + permissive-only enforcement.
+      Run: mvn -Plicense-report license:aggregate-add-third-party
+      Fails the build if any runtime dependency carries a license outside the whitelist.
+      Output: target/generated-sources/license/THIRD-PARTY.txt
+    -->
+    <profile>
+      <id>license-report</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>license-maven-plugin</artifactId>
+            <configuration>
+              <failOnBlacklist>true</failOnBlacklist>
+              <!-- First-party modules carry no POM license; they are not third-party to vet. -->
+              <excludedGroups>com\.eoiagent</excludedGroups>
+              <!-- Test/build-only deps (e.g. JUnit EPL) aren't in distributed artifacts. -->
+              <excludedScopes>test,provided</excludedScopes>
+              <!-- Dual/ambiguous licenses resolved to the elected permissive option (ADR-0012 §3). -->
+              <overrideFile>${maven.multiModuleProjectDirectory}/tools/packaging/license-overrides.properties</overrideFile>
+              <includedLicenses>
+                <includedLicense>Apache-2.0</includedLicense>
+                <includedLicense>MIT</includedLicense>
+                <includedLicense>BSD-2-Clause</includedLicense>
+                <includedLicense>BSD-3-Clause</includedLicense>
+              </includedLicenses>
+              <licenseMerges>
+                <licenseMerge>Apache-2.0|Apache License, Version 2.0|The Apache Software License, Version 2.0|Apache License 2.0|Apache 2.0|Apache-2.0 license|The Apache License, Version 2.0|ASL 2.0</licenseMerge>
+                <licenseMerge>MIT|MIT License|The MIT License|The MIT License (MIT)|MIT license</licenseMerge>
+                <licenseMerge>BSD-3-Clause|BSD License 3|The BSD 3-Clause License|BSD-3-Clause License|3-Clause BSD License|BSD 3-Clause|New BSD License</licenseMerge>
+                <licenseMerge>BSD-2-Clause|BSD License 2|The BSD 2-Clause License|Simplified BSD License</licenseMerge>
+              </licenseMerges>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

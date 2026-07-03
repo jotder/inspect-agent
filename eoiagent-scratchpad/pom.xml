@@ -15,6 +15,11 @@
     third-party deps, offline-safe by construction.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.scratchpad</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

@@ -17,6 +17,11 @@
     (default) and OpenTelemetryTraceCollector (optional, quarantined OTel bridge).
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.observability</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

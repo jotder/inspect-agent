@@ -17,6 +17,11 @@
     Depends only on core PORTS — no agent library or adapter type crosses this boundary (ADR-0001/0010).
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.host</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>

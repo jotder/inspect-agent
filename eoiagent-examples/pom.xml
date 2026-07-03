@@ -19,6 +19,11 @@
     host-integration example.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.examples</automatic.module.name>
+  </properties>
+
   <dependencies>
     <!-- The platform assembler + the reference pack it assembles. -->
     <dependency>
@@ -79,4 +84,54 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+      T-404 / ADR-0014 §3: optional shaded uber-jar for hosts that want a single dependency.
+      Opt-in only (classifier "all"), so the normal reactor build is untouched.
+      Build:  mvn -Puber-jar -pl eoiagent-examples -am package -DskipTests
+      Run:    java -jar eoiagent-examples/target/eoiagent-examples-0.1.0-SNAPSHOT-all.jar
+      (First run needs network once to resolve maven-shade-plugin.)
+    -->
+    <profile>
+      <id>uber-jar</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals><goal>shade</goal></goals>
+                <configuration>
+                  <shadedArtifactAttached>true</shadedArtifactAttached>
+                  <shadedClassifierName>all</shadedClassifierName>
+                  <createDependencyReducedPom>false</createDependencyReducedPom>
+                  <transformers>
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                      <mainClass>com.eoiagent.examples.RunAllDemos</mainClass>
+                    </transformer>
+                    <!-- Merge service files (LC4j SPI, etc.) instead of overwriting. -->
+                    <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                  </transformers>
+                  <filters>
+                    <filter>
+                      <artifact>*:*</artifact>
+                      <excludes>
+                        <exclude>META-INF/*.SF</exclude>
+                        <exclude>META-INF/*.DSA</exclude>
+                        <exclude>META-INF/*.RSA</exclude>
+                        <exclude>module-info.class</exclude>
+                      </excludes>
+                    </filter>
+                  </filters>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

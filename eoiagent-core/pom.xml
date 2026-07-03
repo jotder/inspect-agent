@@ -14,6 +14,11 @@
     Ports + domain types. No agent-framework dependency (conventions §1/§2).
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.core</automatic.module.name>
+  </properties>
+
   <!-- No third-party main dependency: core is framework-free by rule. -->
   <dependencies>
     <dependency>

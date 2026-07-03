@@ -131,6 +131,22 @@ denial table (nftables/Windows FW/--network=none/systemd IPAddressDeny/DNS stub)
 `OfflineEgressDemo` (Phase-4 section in RunAllDemos). Examples pom gained explicit
 eoiagent-safety dep.
 
+**T-404 DONE (2026-07-03) — Phase 4 packaging.** Build-config only, no production code. (1)
+Every jar module got an `<automatic.module.name>` property (com.eoiagent.<module>) written into
+the manifest by a root-pom maven-jar-plugin config (ADR-0014, NO module-info — split packages).
+maven-jar-plugin PINNED to 3.5.0 (explicitly listing the plugin forces version resolution which
+fails offline without a pin; 3.4.2 is broken/uncached — NoClassDefFound plexus FileSet). (2)
+Opt-in `uber-jar` profile on eoiagent-examples → shaded `-all` classifier jar (RunAllDemos main,
+ServicesResourceTransformer, strips module-info/sigs); ~207MB (ONNX native+weights); verified runs
+end-to-end offline. Needs network once for shade plugin. (3) `license-report` profile (root) =
+license-maven-plugin permissive whitelist (Apache-2.0/MIT/BSD-2/3), failOnBlacklist; excludes
+com.eoiagent (first-party) + test/provided (JUnit EPL not distributed); JNA dual Apache/LGPL
+elected→Apache via tools/packaging/license-overrides.properties (ADR-0012 §3). PASSES: 44
+distributed deps, all permissive; snapshot committed to docs/legal/THIRD-PARTY.txt. Verifier
+`node tools/packaging/check-modules.mjs` (asserts every jar's Automatic-Module-Name + no
+module-info.class). New doc docs/packaging/packaging-and-licensing.md (type=packaging, indexed).
+NOTE: license report + shade need network first time (not offline-runnable from cold cache).
+
 **Remaining (restructured backlog):**
 - **Phase 3.5 Integration COMPLETE (T-350…T-356 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
@@ -138,8 +154,8 @@ eoiagent-safety dep.
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).
 - Phase 4: T-403 ✓ (security review). T-402 offline slice ✓ (ONNX session shared per JVM —
   memory dedup only, no wall-clock win; measured 6.4s→6.4s examples suite). T-402's headline AC
-  (live-model latency budgets) BLOCKED until Ollama exists on this box. Left: T-404 packaging,
-  T-405 CI gates.
+  (live-model latency budgets) BLOCKED until Ollama exists on this box. T-404 packaging ✓.
+  Left: T-405 CI gates (last Phase-4 ticket).
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc
 references corrected to JDK Class-File API arch tests (conventions §2 has the note); ADR-0012

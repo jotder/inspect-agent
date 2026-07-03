@@ -16,6 +16,11 @@
     this adapter module per ADR-0010). Planner/TaskManager and Flows C/D/E arrive in Phase 2/3.
   </description>
 
+  <properties>
+    <!-- ADR-0014: stable JPMS automatic module name (T-404). -->
+    <automatic.module.name>com.eoiagent.runtime</automatic.module.name>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.eoiagent</groupId>
