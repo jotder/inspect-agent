@@ -185,6 +185,9 @@ sources. See
 | Session memory in the loop (T-351) | `ReActOrchestrator` + `PlatformBuilder.memoryStore(...)` | [`MultiTurnMemoryDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/MultiTurnMemoryDemo.java) |
 | RAG + citations in the loop (T-352) | `PlatformBuilder` knowledge stack + `ReActOrchestrator.builder().retriever(...)` | [`RagCitationsDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/RagCitationsDemo.java) |
 | Typed NavigationIntent (T-353) | reserved `navigate_to_page` tool from the pack's `NavigationCatalog` | [`LiveNavigationDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/LiveNavigationDemo.java) |
+| Config-first model swap (T-354) | `eoiagent.model.chat.*` keys override the pack `ModelProfile` ([ADR-0013](docs/adr/0013-pluggable-models.md)) | [`ConfigSwapModelDemo`](eoiagent-examples/src/main/java/com/eoiagent/examples/ConfigSwapModelDemo.java) |
+| Mutating approval via platform (T-354) | `PlatformBuilder.approvalHandler(...)` + `MUTATING_ACTIONS`; headless = fail-closed DENIED | `PlatformWiringV2Test` (C4 asserted end-to-end) |
+| Policy ceiling (T-354) | pack `PolicyProfile` = restriction overlay on `RoleBasedPolicyEngine` — packs narrow, never widen | `PlatformWiringV2Test` |
 
 **"The agent operates the UI."** It never does — navigation answers are *typed intents*
 (`AgentAnswer(NAVIGATION, NavigationIntent)`) the model proposes via the reserved

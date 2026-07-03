@@ -108,6 +108,18 @@ public final class PlatformBuilder {
 
 ## Behavior / algorithm
 
+**Assembly as built (T-354, wiring v2):** beyond the Flow 0 sketch below, `PlatformBuilder` now
+(1) applies the `eoiagent.model.chat.*` / `.embedding.*` config keys as overrides on the pack's
+`ModelProfile` — config outranks pack, [ADR-0013](../adr/0013-pluggable-models.md) §1; (2) wires
+the pack `PolicyProfile` as a **restriction overlay** under the default `RoleBasedPolicyEngine`
+ceiling (`CeilingPolicyEngine`: packs narrow permissions, never widen); (3) when
+`MUTATING_ACTIONS` is enabled, assembles the 4-arg mutating `DefaultToolRegistry` behind a
+`CallbackApprovalGate` fed by the host's `PlatformBuilder.approvalHandler(...)` — no handler means
+headless, every approval DENIED, fail-closed (invariant C4 holds through the assembled platform);
+(4) registers the reserved `navigate_to_page` tool from the `NavigationCatalog` (T-353) and the
+knowledge stack from `KnowledgeSource`s (T-352). Host seams: `configProvider`, `auditSink`,
+`llmGateway`, `traceCollector`, `memoryStore`, `retriever`, `approvalHandler`.
+
 Implements **Flow 0 — Platform bootstrap** ([04-sequence-flows.md](../architecture/04-sequence-flows.md#flow-0--platform-bootstrap-startup)):
 
 1. `PackValidator.validate(pack)` — required providers non-null; OFFLINE↔hosted-fallback

@@ -73,8 +73,24 @@ self-corrects (tested). Golden `nav-revenue-dashboard` green E2E through the pla
 changes (goals stay QA; the model chooses the tool). Capability=READ_DOCS (no NAVIGATE cap
 exists). Demo `LiveNavigationDemo` shows reject→correct.
 
+**T-354 DONE (2026-07-03):** platform wiring v2 — the [[platform-wiring-gotcha]] is CLOSED for the
+main flows. (1) Config-first models (ADR-0013 §1): `ModelConfigKeys` in eoiagent-model
+(eoiagent.model.chat/embedding .provider/.modelId/.baseUrl, null defaults = "use pack");
+`PlatformBuilder.buildGateway/buildRetrieval` overlay non-blank config over the pack ModelProfile.
+NOTE: eoiagent-config `ConfigKeys` still carries duplicate MODEL_* constants with the SAME key
+names (one has default "onnx-all-minilm" — harmless since get() uses the PASSED key's default, but
+migrate/remove them per conventions §11 eventually). (2) Mutating stack: `MUTATING_ACTIONS` is
+matrix-permitted in ALL profiles and enabling-key default TRUE → every platform now assembles the
+4-arg mutating registry + `CallbackApprovalGate`; `PlatformBuilder.approvalHandler(...)` is the
+host seam; NO handler = headless gate = every approval DENIED (fail-closed; C4 asserted through
+the assembled platform in `PlatformWiringV2Test`). (3) Policy: `CeilingPolicyEngine` (platform) =
+RoleBasedPolicyEngine ceiling ∧ pack ProfilePolicyEngine — packs narrow, never widen. Deferred
+from T-354: orchestrator selection by GoalKind (host sessions hardcode QA — needs a goal-kind
+signal from the host; revisit with T-356/Phase 4). Demo `ConfigSwapModelDemo` (DemoConfig gained a
+values-map ctor).
+
 **Remaining (restructured backlog):**
-- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓):**
+- **Phase 3.5 Integration (T-350 ✓, T-351 ✓, T-352 ✓, T-353 ✓, T-354 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).

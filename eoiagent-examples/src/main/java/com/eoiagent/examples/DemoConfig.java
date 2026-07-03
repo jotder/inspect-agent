@@ -6,6 +6,7 @@ import com.eoiagent.core.DeploymentProfile;
 import com.eoiagent.core.Feature;
 
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -19,9 +20,16 @@ final class DemoConfig implements ConfigProvider {
 
     private final DeploymentProfile profile;
     private final Set<Feature> enabled;
+    private final Map<String, String> values;
 
     DemoConfig(DeploymentProfile profile, Feature... enabled) {
+        this(profile, Map.of(), enabled);
+    }
+
+    /** T-354: string values by key name, e.g. the {@code eoiagent.model.chat.*} override keys. */
+    DemoConfig(DeploymentProfile profile, Map<String, String> values, Feature... enabled) {
         this.profile = profile;
+        this.values = Map.copyOf(values);
         this.enabled = enabled.length == 0 ? EnumSet.noneOf(Feature.class) : EnumSet.copyOf(Set.of(enabled));
     }
 
@@ -31,7 +39,12 @@ final class DemoConfig implements ConfigProvider {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T get(ConfigKey<T> key) {
+        String raw = values.get(key.name());
+        if (raw != null && key.type() == String.class) {
+            return (T) raw;
+        }
         return key.defaultValue();
     }
 

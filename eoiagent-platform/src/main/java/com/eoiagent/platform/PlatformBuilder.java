@@ -27,10 +27,13 @@ import com.eoiagent.knowledge.Retriever;
 import com.eoiagent.memory.InMemoryMemoryStore;
 import com.eoiagent.memory.MemoryStore;
 import com.eoiagent.model.OllamaEmbeddingAdapter;
+import com.eoiagent.core.Feature;
 import com.eoiagent.observability.AuditSink;
 import com.eoiagent.observability.NoopTraceCollector;
 import com.eoiagent.observability.Slf4jAuditSink;
 import com.eoiagent.observability.TraceCollector;
+import com.eoiagent.safety.ApprovalHandler;
+import com.eoiagent.safety.CallbackApprovalGate;
 import com.eoiagent.runtime.Orchestrator;
 import com.eoiagent.runtime.ReActOrchestrator;
 import com.eoiagent.safety.Guardrail;
@@ -73,6 +76,7 @@ public final class PlatformBuilder {
     private TraceCollector traceOverride;
     private MemoryStore memoryOverride;
     private Retriever retrieverOverride;
+    private ApprovalHandler approvalHandlerOverride;
 
     /** The application pack to assemble. Required. */
     public PlatformBuilder pack(ApplicationPack pack) {
@@ -129,6 +133,16 @@ public final class PlatformBuilder {
         return this;
     }
 
+    /**
+     * The host's human-in-the-loop callback for mutating actions (T-354). Only consulted when the
+     * {@code MUTATING_ACTIONS} feature is enabled; without a handler the approval gate is headless
+     * and every request is DENIED (fail-closed) — mutating tools can never run un-approved.
+     */
+    public PlatformBuilder approvalHandler(ApprovalHandler approvalHandler) {
+        this.approvalHandlerOverride = approvalHandler;
+        return this;
+    }
+
     /** Validate → wire → ready. Throws before building anything if the pack is invalid. */
     public AgentPlatform start() {
         if (pack == null) {
@@ -152,8 +166,23 @@ public final class PlatformBuilder {
             track(owned, gateway);
         }
 
-        PolicyEngine policy = new ProfilePolicyEngine(pack.policyProfile());
-        DefaultToolRegistry registry = new DefaultToolRegistry(policy, audit);
+        // T-354: the pack's PolicyProfile is a restriction overlay on the default grant-table
+        // ceiling — a pack narrows permissions, never widens them.
+        PolicyEngine policy = new CeilingPolicyEngine(new ProfilePolicyEngine(pack.policyProfile()));
+
+        // T-354: with MUTATING_ACTIONS enabled, the registry runs the full mutating dispatch
+        // (policy → dry-run → approval → audit; C4 invariant). No ApprovalHandler wired means the
+        // gate is headless and every approval is DENIED — fail-closed, never fail-open.
+        DefaultToolRegistry registry;
+        if (config.featureEnabled(Feature.MUTATING_ACTIONS)) {
+            CallbackApprovalGate.Builder gate = CallbackApprovalGate.builder();
+            if (approvalHandlerOverride != null) {
+                gate.handler(approvalHandlerOverride);
+            }
+            registry = new DefaultToolRegistry(policy, gate.build(), config, audit);
+        } else {
+            registry = new DefaultToolRegistry(policy, audit);
+        }
         for (Tool tool : pack.toolProvider().tools()) {
             registry.register(tool);
             track(owned, tool); // a host tool may hold a resource (e.g. a JDBC handle)
@@ -175,7 +204,7 @@ public final class PlatformBuilder {
         // first question already retrieves; a pack without knowledge sources gets no retriever.
         Retriever retriever = retrieverOverride;
         if (retriever == null && !pack.knowledgeSources().isEmpty()) {
-            retriever = buildRetrieval(pack);
+            retriever = buildRetrieval(pack, config);
         }
 
         Orchestrator orchestrator = ReActOrchestrator.builder()
@@ -226,9 +255,12 @@ public final class PlatformBuilder {
      * documents are enriched with the {@code sourceId}/{@code sourceType} metadata the ingestor
      * requires — the source id doubles as the citation id the eval harness asserts against.
      */
-    private static Retriever buildRetrieval(ApplicationPack pack) {
+    private static Retriever buildRetrieval(ApplicationPack pack, ConfigProvider config) {
         dev.langchain4j.model.embedding.EmbeddingModel embedding =
-                buildEmbeddingModel(pack.modelProfile().embedding());
+                buildEmbeddingModel(withConfigOverrides(pack.modelProfile().embedding(), config,
+                        com.eoiagent.model.ModelConfigKeys.EMBEDDING_PROVIDER,
+                        com.eoiagent.model.ModelConfigKeys.EMBEDDING_MODEL_ID,
+                        com.eoiagent.model.ModelConfigKeys.EMBEDDING_BASE_URL));
         InMemoryVectorStore store = new InMemoryVectorStore();
         DefaultDocumentIngestor ingestor = new DefaultDocumentIngestor(embedding, store);
 
@@ -272,8 +304,15 @@ public final class PlatformBuilder {
         };
     }
 
+    /**
+     * ADR-0013 §1 — config outranks pack: {@code eoiagent.model.chat.*} keys, when set, override
+     * the pack's {@link ModelProfile}, so a deployment swaps models without recompiling anything.
+     */
     private static LlmGateway buildGateway(ModelProfile modelProfile, ConfigProvider config) {
-        ModelSelection chat = modelProfile.chat();
+        ModelSelection chat = withConfigOverrides(modelProfile.chat(), config,
+                com.eoiagent.model.ModelConfigKeys.CHAT_PROVIDER,
+                com.eoiagent.model.ModelConfigKeys.CHAT_MODEL_ID,
+                com.eoiagent.model.ModelConfigKeys.CHAT_BASE_URL);
         String provider = chat.provider() == null ? "" : chat.provider().trim().toLowerCase(Locale.ROOT);
         LlmGateway backend = switch (provider) {
             case "ollama" -> new OllamaChatAdapter(chat.baseUrl(), chat.modelId());
@@ -284,6 +323,21 @@ public final class PlatformBuilder {
                     + "(inject a gateway via PlatformBuilder.llmGateway(...) for tests/stubs)");
         };
         return RoutingLlmGateway.builder().config(config).addChatBackend(backend).build();
+    }
+
+    /** Overlays non-blank config values onto the pack's selection (provider/modelId/baseUrl). */
+    private static ModelSelection withConfigOverrides(ModelSelection pack, ConfigProvider config,
+                                                      com.eoiagent.core.ConfigKey<String> providerKey,
+                                                      com.eoiagent.core.ConfigKey<String> modelIdKey,
+                                                      com.eoiagent.core.ConfigKey<String> baseUrlKey) {
+        String provider = firstNonBlank(config.get(providerKey), pack == null ? null : pack.provider());
+        String modelId = firstNonBlank(config.get(modelIdKey), pack == null ? null : pack.modelId());
+        String baseUrl = firstNonBlank(config.get(baseUrlKey), pack == null ? null : pack.baseUrl());
+        return new ModelSelection(provider, modelId, baseUrl, pack == null || pack.local());
+    }
+
+    private static String firstNonBlank(String override, String packValue) {
+        return override != null && !override.isBlank() ? override : packValue;
     }
 
     private static void track(List<AutoCloseable> owned, Object adapter) {

@@ -93,6 +93,11 @@ class DemoSmokeTest {
     }
 
     @Test
+    void configSwapModelDemoRuns() {
+        assertThatCode(() -> ConfigSwapModelDemo.main(new String[0])).doesNotThrowAnyException();
+    }
+
+    @Test
     void runAllDemosRuns() {
         assertThatCode(() -> RunAllDemos.main(new String[0])).doesNotThrowAnyException();
     }
