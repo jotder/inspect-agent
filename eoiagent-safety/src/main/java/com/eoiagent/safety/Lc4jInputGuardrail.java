@@ -26,23 +26,36 @@ import java.util.regex.Pattern;
  */
 public final class Lc4jInputGuardrail implements Guardrail, InputGuardrail {
 
-    /** Lower-cased substrings flagging instruction-override, jailbreak and exfiltration attempts. */
-    private static final List<String> INJECTION_PATTERNS = List.of(
-            "ignore previous instructions",
-            "ignore all previous instructions",
-            "disregard previous instructions",
-            "disregard all previous instructions",
-            "forget your instructions",
-            "forget previous instructions",
-            "reveal your system prompt",
-            "show your system prompt",
-            "print your system prompt",
-            "print your instructions",
-            "developer mode",
-            "do anything now",
-            "jailbreak",
-            "ignore your guardrails",
-            "bypass your guardrails");
+    /**
+     * Injection rules, applied over normalized text (lower-cased, zero-width characters stripped,
+     * whitespace collapsed — hardened by the T-403 red-team, which evaded the original exact
+     * substrings with filler words, casing, and zero-width obfuscation). Variant-tolerant but still
+     * heuristic; the residual gaps (paraphrase, encoding, non-English) are documented in
+     * docs/security/security-review-2026-07.md.
+     */
+    private record InjectionRule(String label, Pattern pattern) {
+    }
+
+    private static final List<InjectionRule> INJECTION_RULES = List.of(
+            rule("instruction-override",
+                    "(ignore|disregard|forget|override)\\s+(all\\s+)?(the\\s+|your\\s+|any\\s+)?"
+                    + "(previous\\s+|prior\\s+|above\\s+|earlier\\s+|initial\\s+|original\\s+|system\\s+)?"
+                    + "(instructions?|prompts?|rules?|directives?)"),
+            rule("prompt-exfiltration",
+                    "(reveal|show|print|repeat|output|display|leak)\\s+(me\\s+)?(your\\s+|the\\s+)?"
+                    + "((system|initial|hidden|original)\\s+prompt|your\\s+instructions)"),
+            rule("jailbreak", "developer\\s+mode|do\\s+anything\\s+now|jail\\s?break"),
+            rule("guardrail-bypass",
+                    "(bypass|ignore|disable|remove|circumvent)\\s+(your\\s+|the\\s+|all\\s+)?"
+                    + "(guardrails?|safety\\s+(checks?|filters?|rules?)|content\\s+filters?|restrictions)"));
+
+    private static InjectionRule rule(String label, String regex) {
+        return new InjectionRule(label, Pattern.compile(regex));
+    }
+
+    /** Zero-width characters used to split trigger words past substring detectors. */
+    private static final Pattern ZERO_WIDTH = Pattern.compile("[\\u200B\\u200C\\u200D\\uFEFF]");
+    private static final Pattern WHITESPACE = Pattern.compile("[\\s\\u00A0]+");
 
     private static final Pattern EMAIL = Pattern.compile("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}");
     private static final Pattern SSN = Pattern.compile("\\b\\d{3}-\\d{2}-\\d{4}\\b");
@@ -105,13 +118,20 @@ public final class Lc4jInputGuardrail implements Guardrail, InputGuardrail {
     }
 
     private static String detectInjection(String text) {
-        String lower = text.toLowerCase(Locale.ROOT);
-        for (String pattern : INJECTION_PATTERNS) {
-            if (lower.contains(pattern)) {
-                return pattern;
+        String normalized = normalize(text);
+        for (InjectionRule rule : INJECTION_RULES) {
+            Matcher matcher = rule.pattern().matcher(normalized);
+            if (matcher.find()) {
+                return rule.label() + " \"" + matcher.group() + "\"";
             }
         }
         return null;
+    }
+
+    /** Lower-case, strip zero-width characters, collapse whitespace (incl. NBSP) to one space. */
+    private static String normalize(String text) {
+        String out = ZERO_WIDTH.matcher(text.toLowerCase(Locale.ROOT)).replaceAll("");
+        return WHITESPACE.matcher(out).replaceAll(" ");
     }
 
     private static Redaction redactPii(String text) {

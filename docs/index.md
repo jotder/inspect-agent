@@ -48,6 +48,10 @@ Curated context for AI agents, in [Open Knowledge Format](https://github.com/Goo
 * [Scratchpad / Virtual FS — Spec](specs/scratchpad.md) - Context offloading so the LLM context window doesn't blow up: large intermediate results are stored by handle and re-read on demand.
 * [Tool Registry — Spec](specs/tool-registry.md) - Expose the host's Java API as agent tools and call external tools via MCP, with role/profile visibility filtering and approval+audit-enforced dispatch.
 
+## Security
+
+* [Security Review — T-403 (2026-07)](security/security-review-2026-07.md) - Phase-4 security review: offline zero-egress proof (EgressGuard), prompt-injection red-team findings, audit completeness, and OS-level network-denial guidance.
+
 ## Roadmap
 
 * [Backlog — Agent-Sized Tickets](roadmap/backlog.md) - Each ticket is sized for one agent session: a single module/adapter + its tests.

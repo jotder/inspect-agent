@@ -111,12 +111,31 @@ in offline CI, the T-405 nightly job should run it. NOT in RunAllDemos (needs li
 **A live certification has NOT yet been executed on this machine (no Ollama installed)** — first
 real run pending; candidates: qwen2.5:14b-instruct (default), ornith-1.0-9b.
 
+**T-403 DONE (2026-07-03) — Phase 4 security review.** `EgressGuard` (eoiagent-safety main, pure
+JDK): in-JVM network-deny harness — recording default `ProxySelector` that denies non-loopback
+with `PolicyViolation` before any packet leaves (SecurityManager gone in JDK 25/JEP 486, so the
+default ProxySelector is the strongest remaining seam; JDK HttpClient consults it; raw
+SocketChannel bypasses it → tripwire not sandbox, OS-level denial documented as the hard wall).
+Never resolves DNS to classify hosts. Proofs: `OfflineZeroEgressTest` (examples — FULL platform
+lifecycle incl. ONNX ingest + RAG ask under guard, zero attempts), `GuardrailOfflineTest`
+(guardrails AC4 closed), `AuditCompletenessTest` (RETRIEVAL-before-MODEL_CALL ordering + full
+attribution). Red-team: `Lc4jInputGuardrail` hardened from exact substrings to normalized
+(zero-width strip + whitespace collapse) variant-tolerant regexes (4 labeled rules);
+`InjectionRedTeamTest` = must-block corpus + benign-lookalike false-positive guard + known
+evasions asserted PASS as CANARIES (paraphrase/base64/non-English/persona-split — flip = update
+doc). New doc `docs/security/security-review-2026-07.md` (type=security, indexed) with OS-level
+denial table (nftables/Windows FW/--network=none/systemd IPAddressDeny/DNS stub). Demo
+`OfflineEgressDemo` (Phase-4 section in RunAllDemos). Examples pom gained explicit
+eoiagent-safety dep.
+
 **Remaining (restructured backlog):**
 - **Phase 3.5 Integration COMPLETE (T-350…T-356 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first
   models (subsumes [[platform-wiring-gotcha]]), T-355 real streaming, T-356 live-model E2E +
   model certification (candidates: qwen2.5, Ornith 1.0 9B — agentic-coding model, GGUF/Ollama).
-- Phase 4 (after 3.5): T-402…T-405 as re-scoped in backlog.md.
+- Phase 4: T-403 ✓ (security review). Left: T-402 perf (live-latency AC blocked — no Ollama on
+  this box; offline slice = share/cache ONNX embedding model across boots), T-404 packaging,
+  T-405 CI gates.
 
 **Fixed 2026-07-03** (all committed): ONBOARDING.md refreshed to real status; all ArchUnit doc
 references corrected to JDK Class-File API arch tests (conventions §2 has the note); ADR-0012

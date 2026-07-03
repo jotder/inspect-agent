@@ -46,6 +46,13 @@ public final class RunAllDemos {
         StreamingAnswerDemo.main(args);    // real token streaming via askStream (T-355)
 
         System.out.println();
+        System.out.println("------------------------------------------------------------");
+        System.out.println("  Phase 4 hardening");
+        System.out.println("------------------------------------------------------------");
+
+        OfflineEgressDemo.main(args);      // in-JVM network-deny + audit surface (T-403)
+
+        System.out.println();
         System.out.println("Done. All demos ran offline (no network required).");
     }
 }
