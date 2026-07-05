@@ -11,6 +11,7 @@ final class FakeRuntimeConfig implements ConfigProvider {
     private final int maxSteps;
     private final int offloadThresholdBytes;
     private final int maxWorkers;
+    private int reflectionMaxRevisions = RuntimeConfigKeys.REFLECTION_MAX_REVISIONS.defaultValue();
 
     FakeRuntimeConfig(int maxSteps, int offloadThresholdBytes) {
         this(maxSteps, offloadThresholdBytes, 3);
@@ -20,6 +21,12 @@ final class FakeRuntimeConfig implements ConfigProvider {
         this.maxSteps = maxSteps;
         this.offloadThresholdBytes = offloadThresholdBytes;
         this.maxWorkers = maxWorkers;
+    }
+
+    /** Overrides the reflection revision budget (T-500); returns this for fluent test setup. */
+    FakeRuntimeConfig withReflectionMaxRevisions(int revisions) {
+        this.reflectionMaxRevisions = revisions;
+        return this;
     }
 
     @Override
@@ -38,6 +45,9 @@ final class FakeRuntimeConfig implements ConfigProvider {
         }
         if (key.name().equals(RuntimeConfigKeys.SUPERVISOR_MAX_WORKERS.name())) {
             return (T) Integer.valueOf(maxWorkers);
+        }
+        if (key.name().equals(RuntimeConfigKeys.REFLECTION_MAX_REVISIONS.name())) {
+            return (T) Integer.valueOf(reflectionMaxRevisions);
         }
         return key.defaultValue();
     }

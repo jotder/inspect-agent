@@ -65,6 +65,7 @@ Contract notes:
 | `ReActOrchestrator` | `dev.langchain4j:langchain4j` (tools/AI-Services) + our loop | MVP | Simple bounded reason+act loop (Flow B). Default/fallback path; no external orchestration engine. |
 | `AgenticOrchestrator` | `dev.langchain4j:langchain4j-agentic` (experimental, `1.16.x-betaNN`) | MVP | Sequential / parallel / conditional / loop / supervisor workflows (Flows C, D). Experimental — adapter-only (ADR-0010). |
 | `LangGraphOrchestrator` | `org.bsc.langgraph4j:langgraph4j-core` + `langgraph4j-langchain4j` (1.8.19) | Phase 3 | Cyclical graph, checkpoint/replay, breakpoints, time-travel, HITL (Flow E). Backed by `PostgresCheckpointStore`. |
+| `ReflectionOrchestrator` | (ours) | T-500 | Evaluator-critic refinement (Flow F, §6): draft → critique → revise, our own bounded loop, ports only. For generation goals (`SQL_GEN`, `PIPELINE_AUTHOR`). |
 | `DefaultPlanner` | `dev.langchain4j:langchain4j` (structured output via AI Services) | MVP→Phase 2 | LLM-driven plan generation; emits typed `Plan`. Single-step pass-through for QA goals. |
 | `InMemoryTaskManager` | (ours) | MVP | Per-run, in-memory `TaskList`; host reads via `TaskManager.current()`. |
 
@@ -158,6 +159,28 @@ This is the most safety-critical path; no mutation occurs without a recorded `AP
 5. **Time-travel / replay:** `CheckpointStore.history(runId)` → inspect or re-run from any prior checkpoint; replay must be deterministic given the same recorded tool/model responses.
 6. Concludes with `AgentAnswer` = root-cause hypothesis + evidence citations + recommended/taken actions.
 
+### 6. Reflection (evaluator-critic) loop — Flow F (T-500)
+
+The "reflect" phase of the control loop made explicit for the agent's signature generation goals, and
+the evaluator-critic refinement piece named in the original design. `ReflectionOrchestrator` is our
+own bounded loop (no external engine), reaching the model only through `LlmGateway`:
+
+1. **Draft** — one model call produces a first answer for the goal; audit `MODEL_CALL` + `DECISION`
+   (`reflection: drafted`).
+2. Loop:
+   1. **Critique** — a model call reviews the current draft (strict-reviewer prompt); it replies with
+      the leading verdict `APPROVED` or with specific revisions. Audit `MODEL_CALL`.
+   2. If **approved** → `DECISION` (`reflection round N: approved`); return the current draft.
+   3. If the revision budget (`eoiagent.runtime.reflection.maxRevisions`) is spent → `DECISION`
+      (`reflection: max revisions (N) reached`); return the latest draft (graceful, never an error).
+   4. Else **revise** — a model call rewrites the draft against the critique; audit `MODEL_CALL` +
+      `DECISION` (`reflection round N: revising`); loop.
+
+Bounded by `maxRevisions` (never revises unbounded, mirroring §2.3). Offline fail-closed (AC11): the
+adapter issues no network call itself. Orchestrator selection (routing generation goals here) is a
+wiring concern and stays out of the adapter; it composes with the other orchestrators through the
+`Orchestrator` port.
+
 ## Configuration keys
 
 Keys this module reads (prefix `eoiagent.`, per [02-domain-model.md](../architecture/02-domain-model.md#config-key-namespace)):
@@ -169,6 +192,7 @@ Keys this module reads (prefix `eoiagent.`, per [02-domain-model.md](../architec
 | `eoiagent.runtime.offloadThresholdBytes` | int | `8192` / `8192` / `8192` | results bigger than this go to the `Scratchpad` |
 | `eoiagent.runtime.supervisor.maxWorkers` | int | `3` / `4` / `4` | max sub-agent delegations per run |
 | `eoiagent.runtime.checkpoint.everyNode` | boolean | `true` / `true` / `true` | Phase 3; save a checkpoint after each graph node |
+| `eoiagent.runtime.reflection.maxRevisions` | int | `2` / `2` / `2` | T-500; hard upper bound on evaluator-critic revise rounds |
 | `eoiagent.approval.required` | boolean | `true` / `true` / `true` | gates every mutating step (read from Safety config) |
 
 Feature gates consumed via `ConfigProvider.featureEnabled(...)`: `LANGGRAPH_CHECKPOINTING` (selects `LangGraphOrchestrator`), `MUTATING_ACTIONS` (allows Flow C mutating steps). In `OFFLINE`, no orchestrator may issue a network call; any worker/tool that would must check `featureEnabled(HOSTED_MODELS)` and refuse.
@@ -199,6 +223,7 @@ Failure modes: `maxSteps` exhaustion → graceful CLARIFICATION/summary, never a
 - **AC10** (Phase 3) — A breakpoint before a mutating/escalate node invokes `ApprovalGate.request` before the node executes; `CheckpointStore.history(runId)` returns checkpoints oldest→newest enabling replay.
 - **AC11** — With `profile=OFFLINE`, no orchestrator path performs a network call (asserted by the network-deny harness); an orchestrator configured to a network-only worker throws `PolicyViolation`.
 - **AC12** — `Orchestrator.run` never returns null nor an `AgentAnswer` with `kind=null`; an injected runtime fault yields `AnswerKind.ERROR` plus an `ERROR` `AuditEvent`.
+- **AC13** (T-500) — `ReflectionOrchestrator` returns the draft unchanged when the critic replies `APPROVED` on the first pass; revises and returns the improved draft when the critic rejects then approves; and when `maxRevisions` is spent without approval it returns the latest draft (never `ERROR`), having performed at most `maxRevisions` revise calls. Every draft/critique/revise emits a `MODEL_CALL`.
 
 ## Test plan
 

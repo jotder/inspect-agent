@@ -38,4 +38,12 @@ public final class RuntimeConfigKeys {
     /** Phase 3 (Flow E): save a {@code Checkpoint} after each graph node so the run survives restart. */
     public static final ConfigKey<Boolean> CHECKPOINT_EVERY_NODE =
             new ConfigKey<>("eoiagent.runtime.checkpoint.everyNode", Boolean.class, true);
+
+    /**
+     * Hard upper bound on evaluator-critic revision rounds in the reflection loop
+     * (draft → critique → revise). Zero means draft-then-critique only, never revise; the loop
+     * always terminates within this many revises (T-500).
+     */
+    public static final ConfigKey<Integer> REFLECTION_MAX_REVISIONS =
+            new ConfigKey<>("eoiagent.runtime.reflection.maxRevisions", Integer.class, 2);
 }

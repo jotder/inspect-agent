@@ -157,6 +157,18 @@ live-path SMOKE; real candidates (qwen2.5:14b, Ornith 9B) certify via dispatch o
 hardware or locally. Doc docs/ci/ci-gates.md (type=ci, indexed). Workflows are committed but
 INERT until the repo is pushed to GitHub (local-only commit policy; jotder/inspect-agent).
 
+**T-500 DONE (2026-07-05) — reflection (evaluator-critic) loop; closes [[improvement-backlog]] §5.**
+`ReflectionOrchestrator` (eoiagent-runtime): draft → critique → revise as our OWN bounded loop (not
+LangGraph4j — hand-rolled matches the ReAct/Supervisor idiom, framework-free), ports-only
+(LlmGateway/AuditSink/ConfigProvider), offline-safe, fully audited. Critic approves when its reply
+leads with `APPROVED`; bounded by new key `eoiagent.runtime.reflection.maxRevisions` (default 2);
+budget-exhaustion returns the latest draft (never ERROR). `RuntimeConfigKeys.REFLECTION_MAX_REVISIONS`
++ `FakeRuntimeConfig.withReflectionMaxRevisions(n)` (additive test-double change). 7 tests
+(`ReflectionOrchestratorTest`) green; full runtime module 56 green. Spec: orchestration-runtime §6
+"Flow F" + adapter row + AC13 + config-key row; OKF check + graph regen clean. NOT wired into
+orchestrator auto-selection (deferred with T-354's selection work) — composes via the Orchestrator
+port; routing generation goals (SQL_GEN/PIPELINE_AUTHOR) to it is the follow-up.
+
 **Remaining (restructured backlog):**
 - **Phase 3.5 Integration COMPLETE (T-350…T-356 ✓):**
   T-352 RAG-in-loop, T-353 NavigationIntent emission, T-354 platform wiring v2 + config-first

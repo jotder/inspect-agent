@@ -11,11 +11,15 @@ Sources: every spec's "Out of scope / deferred" section, docs/roadmap/{roadmap,b
 graphify-out/GRAPH_REPORT.md, ONBOARDING.md, and the two root .docx files (original brainstorm +
 stakeholder overview). Cross-checked against git log — see [[project-status]].
 
-## 1. Immediate: finish Phase 3
+## 1. Immediate: finish Phase 3 — ✅ DONE (2026-07-03, see [[project-status]])
 
-- T-304 — investigation tools + root-cause playbooks (events/alerts/incidents/cases)
-- T-305 — VectorLongTermMemory (cross-session recall; `LONG_TERM_MEMORY` key already declared)
-- T-306 — investigation eval + resume-after-restart test
+- ~~T-304 — investigation tools + root-cause playbooks~~ committed `81028e0` (10 tests green)
+- ~~T-305 — VectorLongTermMemory (cross-session recall)~~ committed `4890c58`
+- ~~T-306 — investigation eval + resume-after-restart test~~ committed `65df452`
+
+The whole numbered roadmap (T-001…T-405) is now committed. Only OPEN item is T-402's
+live-model latency AC — BLOCKED until Ollama is installed on this box. Discretionary work =
+§2 optimizations and §5 reflection loop below. **[[project-status]] is the source of truth.**
 
 ## 2. Now-unblocked "Phase 2+" optimizations (dependencies landed)
 
@@ -46,13 +50,19 @@ multi-pack `AppPackRegistry` / pack hot-reload, host follow-ups + answer feedbac
 5. Close two open decisions as ADRs: licensing regime (Apache-2/MIT-only) and task durability (de-facto resolved by T-302).
 6. Consider transferring repo `jotder/inspect-agent` → gammanalytics org.
 
-## 5. Conceptual gap vs. the original brainstorm
+## 5. Conceptual gap vs. the original brainstorm — ✅ CLOSED (T-500, 2026-07-05)
 
 "The pieces a deep agent needs.docx" lists **Reflection / evaluator-critic refinement loops** as
-a core piece and a stated reason for choosing LangGraph4j — but no spec/ticket implements an
-explicit critic loop (draft → review → fix) for SQL/pipeline generation. With
-LangGraphOrchestrator (T-301) in place, a reflection node is now cheap and directly improves the
-agent's signature outputs.
+a core piece and a stated reason for choosing LangGraph4j — but no spec/ticket implemented an
+explicit critic loop (draft → review → fix) for SQL/pipeline generation.
+
+**Done:** `ReflectionOrchestrator` (eoiagent-runtime) — our own bounded loop (NOT on LangGraph4j;
+a hand-rolled loop matches the ReAct/Supervisor idiom and stays framework-free), ports-only
+(LlmGateway/AuditSink/ConfigProvider), offline-safe, fully audited. draft → critique → revise,
+bounded by `eoiagent.runtime.reflection.maxRevisions` (default 2). Critic verdict = reply leading
+with `APPROVED`. 7 tests green (`ReflectionOrchestratorTest`); spec §6 "Flow F" + AC13 + config key
+recorded. NOT yet wired into orchestrator auto-selection (that selection work was itself deferred
+at T-354 — it composes via the `Orchestrator` port; wiring generation goals to it is the follow-up).
 
 **Recommended order:** T-304–306 → red-team suite + tool caching/fan-out (quick wins) → T-402
 performance pass with the reflection loop folded in → rest of Phase 4 → doc fixes anytime as one
