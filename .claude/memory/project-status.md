@@ -197,3 +197,7 @@ assert against. See [[improvement-backlog]] and [[platform-wiring-gotcha]].
 
 Repo: https://github.com/jotder/inspect-agent (personal `jotder`; commits authored
 rahul@gammanalytics.com — org transfer still an open item).
+
+**Pushed to origin 2026-07-05** (up to `6b0fc85`, T-500) — repo is no longer local-only. CI
+workflows from T-405 (`.github/workflows/ci.yml` PR gate, `live-certification.yml` nightly) are
+now ACTIVE, not inert.
