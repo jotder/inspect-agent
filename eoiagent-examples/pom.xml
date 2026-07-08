@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.eoiagent</groupId>
     <artifactId>eoiagent-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
   </parent>
   <artifactId>eoiagent-examples</artifactId>
   <name>eoiagent-examples</name>
@@ -90,7 +90,7 @@
       T-404 / ADR-0014 §3: optional shaded uber-jar for hosts that want a single dependency.
       Opt-in only (classifier "all"), so the normal reactor build is untouched.
       Build:  mvn -Puber-jar -pl eoiagent-examples -am package -DskipTests
-      Run:    java -jar eoiagent-examples/target/eoiagent-examples-0.1.0-SNAPSHOT-all.jar
+      Run:    java -jar eoiagent-examples/target/eoiagent-examples-0.1.0-all.jar
       (First run needs network once to resolve maven-shade-plugin.)
     -->
     <profile>
