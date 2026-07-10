@@ -16,3 +16,6 @@ Thumbs.db
 
 # Logs / temp
 *.log
+
+# Generated graphify artifacts (uncommitted by convention)
+graphify-out/
