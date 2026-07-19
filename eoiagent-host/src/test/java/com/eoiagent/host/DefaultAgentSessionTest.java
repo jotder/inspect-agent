@@ -29,10 +29,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class DefaultAgentSessionTest {
 
     private static AgentSession session(Orchestrator orch, Guardrail guard, RecordingAuditSink audit) {
+        return session(orch, guard, audit, Map.of());
+    }
+
+    private static AgentSession session(Orchestrator orch, Guardrail guard, RecordingAuditSink audit,
+                                        Map<String, String> attributes) {
         DefaultAgentService svc = new DefaultAgentService(new AppId("app"),
                 new FakeConfig(DeploymentProfile.OFFLINE), orch, guard, audit);
         return svc.open(new SessionRequest(new UserId("u"), Role.USER, DeploymentProfile.OFFLINE,
-                page("dashboard"), Map.of()));
+                page("dashboard"), attributes));
     }
 
     private static PageContext page(String id) {
@@ -120,6 +125,41 @@ class DefaultAgentSessionTest {
         assertThat(answer.kind()).isEqualTo(AnswerKind.ERROR);
         assertThat(answer.run()).isNotNull();
         assertThat(audit.kinds()).contains(AuditKind.ERROR);
+    }
+
+    @Test
+    void goalKindDefaultsToQaWhenNoSessionAttribute() {
+        StubOrchestrator orch = new StubOrchestrator()
+                .returning(runWith(new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"))));
+        AgentSession s = session(orch, StubGuardrail.pass(), new RecordingAuditSink());
+
+        s.ask(msg("status?", page("dashboard")));
+
+        assertThat(orch.lastGoal.kind()).isEqualTo(com.eoiagent.core.GoalKind.QA);
+    }
+
+    @Test
+    void goalKindFromTheSessionAttributeIsHonored() {
+        StubOrchestrator orch = new StubOrchestrator()
+                .returning(runWith(new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"))));
+        AgentSession s = session(orch, StubGuardrail.pass(), new RecordingAuditSink(),
+                Map.of("goalKind", "INVESTIGATION"));
+
+        s.ask(msg("what broke?", page("incidents")));
+
+        assertThat(orch.lastGoal.kind()).isEqualTo(com.eoiagent.core.GoalKind.INVESTIGATION);
+    }
+
+    @Test
+    void unknownGoalKindFallsBackToQaRatherThanThrowing() {
+        StubOrchestrator orch = new StubOrchestrator()
+                .returning(runWith(new AgentAnswer(AnswerKind.TEXT, "ok", null, null, List.of(), new RunId("r"))));
+        AgentSession s = session(orch, StubGuardrail.pass(), new RecordingAuditSink(),
+                Map.of("goalKind", "NOT_A_KIND"));
+
+        s.ask(msg("hi", page("dashboard")));
+
+        assertThat(orch.lastGoal.kind()).isEqualTo(com.eoiagent.core.GoalKind.QA);
     }
 
     @Test

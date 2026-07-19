@@ -99,7 +99,7 @@ final class DefaultAgentSession implements AgentSession {
         }
         String text = guard.verdict() == GuardrailVerdict.REDACTED ? guard.transformedText() : msg.text();
 
-        AgentRun run = orchestrator.run(new Goal(text, GoalKind.QA), ctx, onToken);
+        AgentRun run = orchestrator.run(new Goal(text, goalKind(ctx)), ctx, onToken);
         AgentAnswer answer = run.answer();
         String redactNote = guard.verdict() == GuardrailVerdict.REDACTED ? " (pii redacted)" : "";
         record(AuditKind.DECISION, run.id(), "ask -> " + answer.kind() + redactNote);
@@ -111,6 +111,25 @@ final class DefaultAgentSession implements AgentSession {
         record(AuditKind.ERROR, run, detail);
         return new AgentAnswer(AnswerKind.ERROR, "The request could not be completed.",
                 null, null, List.of(), run);
+    }
+
+    /**
+     * The goal kind for this run: a host may pin it via the session's {@code "goalKind"} attribute
+     * (e.g. {@code INVESTIGATION}); absent, blank, or unrecognized falls back to {@link GoalKind#QA}.
+     * Additive seam — the host chooses the kind without any change to {@link UserMessage} or the
+     * public session API.
+     */
+    private static GoalKind goalKind(AgentContext ctx) {
+        Map<String, String> attrs = ctx.attributes();
+        String raw = attrs == null ? null : attrs.get("goalKind");
+        if (raw == null || raw.isBlank()) {
+            return GoalKind.QA;
+        }
+        try {
+            return GoalKind.valueOf(raw.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException unknownKind) {
+            return GoalKind.QA;
+        }
     }
 
     private AgentContext withPage(PageContext page) {
