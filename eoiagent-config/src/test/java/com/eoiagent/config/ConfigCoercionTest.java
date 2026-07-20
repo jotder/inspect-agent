@@ -34,6 +34,22 @@ class ConfigCoercionTest {
     }
 
     @Test
+    void coercesDurationAndRejectsMalformed() { // AC5 / AC4
+        ConfigProvider cfg = new ProgrammaticConfigProvider(Map.of(
+                "eoiagent.approval.timeout", "PT30M",
+                "eoiagent.approval.onTimeout", "DENIED"));
+        assertThat(cfg.get(ConfigKeys.APPROVAL_TIMEOUT)).isEqualTo(java.time.Duration.ofMinutes(30));
+        assertThat(cfg.get(ConfigKeys.APPROVAL_ON_TIMEOUT))
+                .isEqualTo(com.eoiagent.core.ApprovalDecision.DENIED);
+        assertThat(new ProgrammaticConfigProvider(Map.of()).get(ConfigKeys.APPROVAL_TIMEOUT))
+                .isEqualTo(java.time.Duration.ofMinutes(5)); // shipped default
+        assertThatThrownBy(() -> new ProgrammaticConfigProvider(Map.of(
+                "eoiagent.approval.timeout", "5 minutes")))
+                .isInstanceOf(ConfigException.class)
+                .hasMessageContaining("eoiagent.approval.timeout");
+    }
+
+    @Test
     void enumCoercionIsCaseInsensitive() {
         ConfigProvider cfg = new ProgrammaticConfigProvider(Map.of("eoiagent.profile", "cloud"));
         assertThat(cfg.profile()).isEqualTo(DeploymentProfile.CLOUD);

@@ -34,6 +34,7 @@ import com.eoiagent.observability.Slf4jAuditSink;
 import com.eoiagent.observability.TraceCollector;
 import com.eoiagent.safety.ApprovalHandler;
 import com.eoiagent.safety.CallbackApprovalGate;
+import com.eoiagent.safety.DecisionStore;
 import com.eoiagent.runtime.Orchestrator;
 import com.eoiagent.runtime.ReActOrchestrator;
 import com.eoiagent.safety.Guardrail;
@@ -77,6 +78,7 @@ public final class PlatformBuilder {
     private MemoryStore memoryOverride;
     private Retriever retrieverOverride;
     private ApprovalHandler approvalHandlerOverride;
+    private DecisionStore approvalDecisionStoreOverride;
 
     /** The application pack to assemble. Required. */
     public PlatformBuilder pack(ApplicationPack pack) {
@@ -143,6 +145,18 @@ public final class PlatformBuilder {
         return this;
     }
 
+    /**
+     * Optional host-supplied durable side-channel for approval decisions. The gate consults it
+     * before prompting the {@link ApprovalHandler}; a one-shot host implementation gives
+     * resume-after-restart (an operator decision persisted while the original gate thread is gone
+     * is consumed by the re-issued run's identical call). Misses and store failures fall through
+     * to the normal prompt — the store can never widen access.
+     */
+    public PlatformBuilder approvalDecisionStore(DecisionStore decisionStore) {
+        this.approvalDecisionStoreOverride = decisionStore;
+        return this;
+    }
+
     /** Validate → wire → ready. Throws before building anything if the pack is invalid. */
     public AgentPlatform start() {
         if (pack == null) {
@@ -175,9 +189,14 @@ public final class PlatformBuilder {
         // gate is headless and every approval is DENIED — fail-closed, never fail-open.
         DefaultToolRegistry registry;
         if (config.featureEnabled(Feature.MUTATING_ACTIONS)) {
-            CallbackApprovalGate.Builder gate = CallbackApprovalGate.builder();
+            CallbackApprovalGate.Builder gate = CallbackApprovalGate.builder()
+                    .timeout(config.get(ConfigKeys.APPROVAL_TIMEOUT))
+                    .onTimeout(config.get(ConfigKeys.APPROVAL_ON_TIMEOUT));
             if (approvalHandlerOverride != null) {
                 gate.handler(approvalHandlerOverride);
+            }
+            if (approvalDecisionStoreOverride != null) {
+                gate.decisionStore(approvalDecisionStoreOverride);
             }
             registry = new DefaultToolRegistry(policy, gate.build(), config, audit);
         } else {

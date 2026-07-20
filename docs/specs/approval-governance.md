@@ -95,8 +95,22 @@ public interface DryRunProvider {
 
 `CallbackApprovalGate` is constructed via builder with: an `ApprovalHandler`, a timeout
 (`Duration`), a default-on-timeout policy (`TIMED_OUT` vs auto-`DENIED`), an optional
-`Map<String,DryRunProvider>` keyed by tool name, and the `AuditSink` is NOT injected here (the
-`ToolRegistry` owns audit emission around the gate).
+`Map<String,DryRunProvider>` keyed by tool name, an optional `DecisionStore`, and the `AuditSink`
+is NOT injected here (the `ToolRegistry` owns audit emission around the gate).
+
+```java
+// Optional: host-supplied durable side-channel. Consulted before prompting the handler; written
+// after a decision is collected. The host owns keying/persistence/consumption -- a one-shot
+// implementation gives resume-after-restart. find misses and store failures fall through to the
+// normal prompt (fail toward the human, never fail open).
+public interface DecisionStore {
+    Optional<ApprovalDecision> find(ApprovalRequest req);
+    void record(ApprovalRequest req, ApprovalDecision decision);
+}
+```
+
+`PlatformBuilder` wires the gate from config (`eoiagent.approval.timeout` / `.onTimeout`) and
+passes through a host `DecisionStore` via `approvalDecisionStore(...)`.
 
 ## Maven coordinates
 
@@ -288,8 +302,9 @@ Run: `mvn -pl eoiagent-safety -am test`
   the callback gate. (Phase 2 host integration.)
 - Multi-approver / quorum approval, approval delegation, time-boxed standing approvals — **deferred,
   Phase 4 hardening.**
-- Persisting approval decisions across restart — relies on `CheckpointStore`/audit replay;
-  **deferred to Phase 3** (Flow E breakpoints).
+- Persisting approval decisions across restart — the framework seam is the host-supplied
+  `DecisionStore` (above); full run-state checkpoint/resume relies on `CheckpointStore`/audit
+  replay, **deferred to Phase 3** (Flow E breakpoints).
 - Data-classification / column-level policy beyond `Capability` granularity — **deferred, Phase 4.**
 
 ## Related ADRs & flows

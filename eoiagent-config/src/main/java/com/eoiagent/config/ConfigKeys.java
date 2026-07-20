@@ -1,5 +1,6 @@
 package com.eoiagent.config;
 
+import com.eoiagent.core.ApprovalDecision;
 import com.eoiagent.core.ConfigKey;
 import com.eoiagent.core.DeploymentProfile;
 import com.eoiagent.core.Feature;
@@ -58,6 +59,14 @@ public final class ConfigKeys {
             ConfigKey.of("eoiagent.vectorstore.kind", String.class);
     public static final ConfigKey<Boolean> APPROVAL_REQUIRED =
             new ConfigKey<>("eoiagent.approval.required", Boolean.class, Boolean.TRUE);
+    /** How long the gate blocks for a human decision (ISO-8601, e.g. {@code PT30M}). */
+    public static final ConfigKey<java.time.Duration> APPROVAL_TIMEOUT =
+            new ConfigKey<>("eoiagent.approval.timeout", java.time.Duration.class,
+                    java.time.Duration.ofMinutes(5));
+    /** Disposition on timeout — {@code TIMED_OUT} or {@code DENIED}, never {@code APPROVED}. */
+    public static final ConfigKey<ApprovalDecision> APPROVAL_ON_TIMEOUT =
+            new ConfigKey<>("eoiagent.approval.onTimeout", ApprovalDecision.class,
+                    ApprovalDecision.TIMED_OUT);
     public static final ConfigKey<String> AUDIT_SINK =
             ConfigKey.of("eoiagent.audit.sink", String.class);
 
@@ -69,7 +78,8 @@ public final class ConfigKeys {
                 ADVANCED_RETRIEVAL_ENABLED, LANGGRAPH_CHECKPOINTING_ENABLED, LONG_TERM_MEMORY_ENABLED,
                 MCP_TRANSPORT,
                 MODEL_CHAT_PROVIDER, MODEL_CHAT_BASE_URL, MODEL_CHAT_MODEL_ID, MODEL_EMBEDDING_PROVIDER,
-                VECTORSTORE_KIND, APPROVAL_REQUIRED, AUDIT_SINK);
+                VECTORSTORE_KIND, APPROVAL_REQUIRED, APPROVAL_TIMEOUT, APPROVAL_ON_TIMEOUT,
+                AUDIT_SINK);
     }
 
     /** The boolean key that enables a feature (consulted only after the matrix permits it). */

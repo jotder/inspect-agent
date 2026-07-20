@@ -39,6 +39,7 @@ public final class CallbackApprovalGate implements ApprovalGate {
     private final Duration timeout;
     private final ApprovalDecision onTimeout;              // DENIED or TIMED_OUT (never APPROVED)
     private final Map<String, DryRunProvider> dryRunProviders;
+    private final DecisionStore decisionStore;             // null → no durable side-channel
 
     private final Map<Key, ApprovalDecision> decided = new ConcurrentHashMap<>();
 
@@ -47,6 +48,7 @@ public final class CallbackApprovalGate implements ApprovalGate {
         this.timeout = b.timeout;
         this.onTimeout = b.onTimeout;
         this.dryRunProviders = Map.copyOf(b.dryRunProviders);
+        this.decisionStore = b.decisionStore;
     }
 
     public static Builder builder() {
@@ -61,9 +63,38 @@ public final class CallbackApprovalGate implements ApprovalGate {
         if (cached != null) {
             return cached; // idempotent on retry — never re-prompt the human (AC6)
         }
+        ApprovalDecision stored = fromStore(req);
+        if (stored != null) {
+            decided.put(key, stored); // host already collected this decision — never re-prompt
+            return stored;
+        }
         ApprovalDecision decision = decide(req);
         decided.put(key, decision);
+        recordToStore(req, decision);
         return decision;
+    }
+
+    /** A store miss or a throwing store falls through to the handler prompt — never fail open. */
+    private ApprovalDecision fromStore(ApprovalRequest req) {
+        if (decisionStore == null) {
+            return null;
+        }
+        try {
+            return decisionStore.find(req).orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private void recordToStore(ApprovalRequest req, ApprovalDecision decision) {
+        if (decisionStore == null) {
+            return;
+        }
+        try {
+            decisionStore.record(req, decision);
+        } catch (RuntimeException e) {
+            // bookkeeping only — the decision stands regardless of the store
+        }
     }
 
     private ApprovalDecision decide(ApprovalRequest req) {
@@ -123,6 +154,7 @@ public final class CallbackApprovalGate implements ApprovalGate {
         private Duration timeout = Duration.ofMinutes(5);
         private ApprovalDecision onTimeout = ApprovalDecision.TIMED_OUT;
         private final Map<String, DryRunProvider> dryRunProviders = new HashMap<>();
+        private DecisionStore decisionStore;
 
         public Builder handler(ApprovalHandler handler) {
             this.handler = handler;
@@ -140,6 +172,11 @@ public final class CallbackApprovalGate implements ApprovalGate {
                 throw new ConfigException("approval.onTimeout must be DENIED or TIMED_OUT, never APPROVED");
             }
             this.onTimeout = onTimeout;
+            return this;
+        }
+
+        public Builder decisionStore(DecisionStore decisionStore) {
+            this.decisionStore = decisionStore;
             return this;
         }
 

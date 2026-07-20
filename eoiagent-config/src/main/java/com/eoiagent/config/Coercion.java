@@ -6,7 +6,8 @@ import java.util.Locale;
 
 /**
  * Coerces a raw string source value to a {@link com.eoiagent.core.ConfigKey} type. Supports
- * {@code String}, {@code Boolean}, {@code Integer}, {@code Long}, and any {@code enum}. A value
+ * {@code String}, {@code Boolean}, {@code Integer}, {@code Long}, {@code Duration} (ISO-8601,
+ * e.g. {@code PT5M}), and any {@code enum}. A value
  * that cannot be coerced throws {@link ConfigException} (surfaced at construction for known keys).
  */
 final class Coercion {
@@ -44,6 +45,14 @@ final class Coercion {
             } catch (NumberFormatException e) {
                 throw new ConfigException(
                         "config key '" + keyName + "': not a long: '" + raw + "'", e);
+            }
+        }
+        if (type == java.time.Duration.class) {
+            try {
+                return (T) java.time.Duration.parse(v);
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new ConfigException(
+                        "config key '" + keyName + "': not an ISO-8601 duration: '" + raw + "'", e);
             }
         }
         if (type.isEnum()) {

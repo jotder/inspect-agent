@@ -96,6 +96,72 @@ class CallbackApprovalGateTest {
     }
 
     @Test
+    void decisionStoreHitBypassesHandlerAndIsCached() { // AC9
+        AtomicInteger handlerCalls = new AtomicInteger();
+        AtomicInteger finds = new AtomicInteger();
+        CallbackApprovalGate gate = CallbackApprovalGate.builder()
+                .timeout(Duration.ofSeconds(5))
+                .handler(r -> { handlerCalls.incrementAndGet(); return ApprovalDecision.DENIED; })
+                .decisionStore(new DecisionStore() {
+                    @Override
+                    public java.util.Optional<ApprovalDecision> find(ApprovalRequest req) {
+                        finds.incrementAndGet();
+                        return java.util.Optional.of(ApprovalDecision.APPROVED);
+                    }
+
+                    @Override
+                    public void record(ApprovalRequest req, ApprovalDecision decision) {
+                    }
+                })
+                .build();
+        ApprovalRequest request = req("run_pipeline");
+
+        assertThat(gate.request(request)).isEqualTo(ApprovalDecision.APPROVED);
+        assertThat(gate.request(request)).isEqualTo(ApprovalDecision.APPROVED); // local cache
+        assertThat(handlerCalls.get()).isZero();  // never prompted
+        assertThat(finds.get()).isEqualTo(1);     // one-shot friendly: consulted once per request
+    }
+
+    @Test
+    void decisionStoreMissOrFailureFallsThroughAndRecordsDecision() { // AC9 (fail toward the human)
+        java.util.List<ApprovalDecision> recorded = new java.util.concurrent.CopyOnWriteArrayList<>();
+        CallbackApprovalGate miss = CallbackApprovalGate.builder()
+                .timeout(Duration.ofSeconds(5))
+                .handler(r -> ApprovalDecision.APPROVED)
+                .decisionStore(new DecisionStore() {
+                    @Override
+                    public java.util.Optional<ApprovalDecision> find(ApprovalRequest req) {
+                        return java.util.Optional.empty();
+                    }
+
+                    @Override
+                    public void record(ApprovalRequest req, ApprovalDecision decision) {
+                        recorded.add(decision);
+                    }
+                })
+                .build();
+        CallbackApprovalGate throwing = CallbackApprovalGate.builder()
+                .timeout(Duration.ofSeconds(5))
+                .handler(r -> ApprovalDecision.DENIED)
+                .decisionStore(new DecisionStore() {
+                    @Override
+                    public java.util.Optional<ApprovalDecision> find(ApprovalRequest req) {
+                        throw new IllegalStateException("store down");
+                    }
+
+                    @Override
+                    public void record(ApprovalRequest req, ApprovalDecision decision) {
+                        throw new IllegalStateException("store down");
+                    }
+                })
+                .build();
+
+        assertThat(miss.request(req("run_pipeline"))).isEqualTo(ApprovalDecision.APPROVED);
+        assertThat(recorded).containsExactly(ApprovalDecision.APPROVED);
+        assertThat(throwing.request(req("run_pipeline"))).isEqualTo(ApprovalDecision.DENIED);
+    }
+
+    @Test
     void dryRunResolvesProviderOrReportsUnsupported() { // AC7
         CallbackApprovalGate gate = CallbackApprovalGate.builder()
                 .handler(r -> ApprovalDecision.DENIED)
