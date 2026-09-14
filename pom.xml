@@ -15,6 +15,27 @@
     See docs/architecture/02-domain-model.md (Maven coordinates) and AGENTS.md.
   </description>
 
+  <!-- Declared here, on the aggregator, so every eoiagent-* module inherits it: consumers read the
+       licence by walking the parent chain, and one declaration is what keeps the modules from
+       drifting apart.
+
+       WHY IT EXISTS AT ALL. The license-maven-plugin config below excludes com.eoiagent from its own
+       third-party vetting, on the reasoning that first-party modules are not third-party to vet. That
+       is true inside THIS reactor and false at its boundary: to a downstream consumer, com.eoiagent is
+       a different groupId outside their reactor, i.e. third-party — and a component that declares no
+       licence reaches their bill of materials as NOASSERTION. A consumer's SBOM licence gate
+       (com.gamma.inspector's, 2026-09-14) refused to ship a document asserting nothing about
+       eoiagent-core and eoiagent-model, which is how the omission surfaced. ⛔ Do not remove this on
+       the grounds that the plugin already excludes the group; the exclusion governs what THIS build
+       vets, not what a consumer's bill of materials can state. -->
+  <licenses>
+    <license>
+      <name>Apache-2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
   <properties>
     <maven.compiler.release>25</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
